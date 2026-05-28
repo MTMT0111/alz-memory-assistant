@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="mock-login-screen">
+    <div class="mock-login-card">
+        <div class="app-logo-mark" aria-hidden="true">
+            <span>ALZ</span>
+        </div>
+        <div class="mock-login-copy">
+            <p class="section-kicker">LLM-assisted companion and caregiving support app</p>
+            <h1>Alzheimer Family Care App</h1>
+            <p class="subtitle">当前是演示用 mock login，用来体现软件感和 Patient / Caregiver 入口分离，不包含真实认证系统。</p>
+        </div>
+
+        <form class="mock-login-form" action="/app" method="get">
+            <label class="field">
+                <span>Mock username</span>
+                <input type="text" name="user" placeholder="例如：daughter_li / patient_demo" value="{{ mock_user }}">
+            </label>
+
+            <div class="role-select-grid" role="radiogroup" aria-label="Choose role">
+                <label class="role-choice-card">
+                    <input type="radio" name="role" value="patient" checked>
+                    <span class="role-choice-label">Patient mode</span>
+                    <strong>陪伴首页</strong>
+                    <small>语音优先、简洁、低刺激。</small>
+                </label>
+                <label class="role-choice-card">
+                    <input type="radio" name="role" value="caregiver">
+                    <span class="role-choice-label">Caregiver mode</span>
+                    <strong>照护工作台</strong>
+                    <small>提醒、日志、定位安全和配置入口。</small>
+                </label>
+            </div>
+
+            <button type="submit" class="login-continue-button">Continue</button>
+        </form>
+
+        <div class="mock-login-links">
+            <a href="/conversation">直接打开 Patient 对话页</a>
+            <a href="/care-portal">直接打开 Caregiver 工作台</a>
+        </div>
+    </div>
+</section>
+{% endblock %}

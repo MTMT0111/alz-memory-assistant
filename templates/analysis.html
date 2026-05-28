@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="analysis-dashboard-shell">
+    <header class="analysis-dashboard-header">
+        <div>
+            <p class="section-kicker">Caregiver Dashboard</p>
+            <h1>今日照护闭环</h1>
+            <p class="subtitle">提醒确认、风险事件、建议操作</p>
+            <div class="analysis-profile-line">
+                <strong>李桂兰（李奶奶）</strong>
+                <span>78 岁 · 温州</span>
+                <span>主要家属：陈小雨</span>
+                <span id="analysis-current-date">今日</span>
+            </div>
+        </div>
+        <nav class="analysis-top-actions" aria-label="照护面板导航">
+            <a class="ghost-button" href="/app_home">返回首页</a>
+            <a class="ghost-button" href="/conversation">进入患者端对话</a>
+            <a class="ghost-button" href="/demo-flow">查看演示流程</a>
+            <a class="ghost-button" href="/test-results">查看测试结果</a>
+        </nav>
+    </header>
+
+    <section class="analysis-section" aria-labelledby="today-overview-title">
+        <div class="analysis-section-head">
+            <div>
+                <p class="card-kicker">今日总览</p>
+                <h2 id="today-overview-title">一眼看今天是否需要介入</h2>
+            </div>
+        </div>
+        <div class="analysis-overview-grid">
+            <article class="analysis-overview-card">
+                <span class="gentle-stat-label">今日整体状态</span>
+                <strong id="daily-care-overall-status" class="status-pill">待更新</strong>
+                <p>由提醒状态和规则层风险事件生成。</p>
+            </article>
+            <article class="analysis-overview-card">
+                <span class="gentle-stat-label">提醒完成情况</span>
+                <div class="analysis-count-row">
+                    <span>总数 <strong id="daily-care-total">0</strong></span>
+                    <span>已确认 <strong id="daily-care-confirmed">0</strong></span>
+                    <span>待确认 <strong id="daily-care-pending">0</strong></span>
+                    <span>未完成 <strong id="daily-care-missed">0</strong></span>
+                    <span>已跳过 <strong id="daily-care-skipped">0</strong></span>
+                </div>
+            </article>
+            <article class="analysis-overview-card">
+                <span class="gentle-stat-label">风险事件</span>
+                <div class="analysis-count-row">
+                    <span>高风险 <strong id="daily-care-risk-high">0</strong></span>
+                    <span>中风险 <strong id="daily-care-risk-medium">0</strong></span>
+                    <span>低风险 <strong id="daily-care-risk-low">0</strong></span>
+                    <span>未处理 <strong id="daily-care-unresolved">0</strong></span>
+                </div>
+            </article>
+            <article class="analysis-overview-card">
+                <span class="gentle-stat-label">今日建议</span>
+                <div id="daily-care-suggested-actions" class="analysis-mini-list"></div>
+            </article>
+        </div>
+    </section>
+
+    <section class="analysis-main-grid">
+        <article class="analysis-section analysis-reminder-panel" aria-labelledby="today-reminders-title">
+            <div class="analysis-section-head">
+                <div>
+                    <p class="card-kicker">今日提醒任务</p>
+                    <h2 id="today-reminders-title">确认 / 未完成 / 跳过</h2>
+                </div>
+                <span id="analysis-reminder-action-status" class="analysis-action-status" aria-live="polite"></span>
+            </div>
+            <p class="analysis-safe-note">用药状态用于患者端回答，系统不会让 LLM 猜测用药事实。</p>
+            <div id="analysis-reminder-task-list" class="analysis-card-list"></div>
+        </article>
+
+        <article class="analysis-section analysis-event-panel" aria-labelledby="risk-events-title">
+            <div class="analysis-section-head">
+                <div>
+                    <p class="card-kicker">风险事件与建议操作</p>
+                    <h2 id="risk-events-title">规则层触发的家属提醒</h2>
+                </div>
+                <span id="caregiver-unresolved-count" class="status-pill">未处理 0</span>
+            </div>
+            <p class="debug-note">风险由规则层识别，供家属参考和处理。</p>
+            <span id="caregiver-event-action-status" class="analysis-action-status" aria-live="polite"></span>
+            <div id="caregiver-event-detail-list" class="analysis-event-groups"></div>
+        </article>
+    </section>
+
+    <section class="analysis-bottom-grid">
+        <article class="analysis-section" aria-labelledby="recent-chat-title">
+            <div class="analysis-section-head">
+                <div>
+                    <p class="card-kicker">最近对话摘要</p>
+                    <h2 id="recent-chat-title">最近 5 条患者端互动</h2>
+                </div>
+                <a class="ghost-button" href="/chat-history">查看聊天记录</a>
+            </div>
+            <p id="analysis-recent-chat-summary" class="summary-note-text">最近聊天摘要会显示在这里。</p>
+            <div id="analysis-recent-chat-list" class="analysis-card-list"></div>
+        </article>
+
+        <article class="analysis-section" aria-labelledby="materials-memory-title">
+            <div class="analysis-section-head">
+                <div>
+                    <p class="card-kicker">熟悉素材与记忆候选状态</p>
+                    <h2 id="materials-memory-title">素材是否足够支持陪伴</h2>
+                </div>
+            </div>
+            <div class="analysis-material-memory-grid">
+                <div class="analysis-subcard">
+                    <h3>熟悉素材配置状态</h3>
+                    <div id="analysis-material-status-grid" class="analysis-status-grid"></div>
+                    <div class="analysis-inline-links">
+                        <a class="ghost-button" href="/materials">管理熟悉素材</a>
+                        <a class="ghost-button" href="/reminiscence">回忆陪伴</a>
+                    </div>
+                </div>
+                <div class="analysis-subcard">
+                    <h3>记忆候选状态</h3>
+                    <div id="analysis-memory-candidate-status-grid" class="analysis-status-grid"></div>
+                    <div class="analysis-inline-links">
+                        <a class="ghost-button" href="/chat-history">查看聊天记录与候选</a>
+                    </div>
+                </div>
+            </div>
+        </article>
+    </section>
+</section>
+{% endblock %}

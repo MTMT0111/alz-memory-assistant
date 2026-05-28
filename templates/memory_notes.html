@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header">
+    <div>
+        <p class="section-kicker">照护日志</p>
+        <h1>近期照护记录与重要摘要</h1>
+        <p class="subtitle">这里汇总最近互动、提醒安排、异常事件和重要对话片段，帮助家属快速了解近期照护状态。</p>
+    </div>
+</section>
+
+<section class="caregiver-summary-grid">
+    <article class="summary-note-card caregiver-card">
+        <p class="summary-note-label">最近互动记录</p>
+        <p id="recent-topics" class="summary-note-text">近期互动摘要会显示在这里。</p>
+    </article>
+
+    <article class="summary-note-card caregiver-card">
+        <p class="summary-note-label">提醒完成情况</p>
+        <p id="care-reminder-summary" class="summary-note-text">提醒情况会显示在这里。</p>
+    </article>
+
+    <article class="summary-note-card caregiver-card">
+        <p class="summary-note-label">最近异常情况</p>
+        <p id="care-event-summary" class="summary-note-text">异常记录会显示在这里。</p>
+    </article>
+
+    <article class="summary-note-card caregiver-card">
+        <p class="summary-note-label">给家属的一句摘要</p>
+        <p id="notes-gentle-summary" class="summary-note-text">整体情况会在这里更新。</p>
+    </article>
+
+    <article class="summary-note-card caregiver-card caregiver-card-span-two">
+        <p class="summary-note-label">异常事件记录</p>
+        <div class="event-form-grid">
+            <label class="field">
+                <span>事件类型</span>
+                <select id="event-type">
+                    <option value="agitation">情绪激越</option>
+                    <option value="medication_refusal">拒药</option>
+                    <option value="nighttime">夜间异常</option>
+                    <option value="wandering_risk">离家倾向</option>
+                    <option value="sleep">睡眠异常</option>
+                    <option value="repeated_question">重复提问明显增加</option>
+                    <option value="other">其他事件</option>
+                </select>
+            </label>
+            <label class="field">
+                <span>严重度</span>
+                <select id="event-severity">
+                    <option value="low">低</option>
+                    <option value="medium">中</option>
+                    <option value="high">高</option>
+                </select>
+            </label>
+            <label class="field event-form-wide">
+                <span>事件说明</span>
+                <input id="event-description" type="text" placeholder="例如：晚间反复起身找门，家属已陪同安抚。">
+            </label>
+            <label class="field">
+                <span>记录人</span>
+                <input id="event-created-by" type="text" placeholder="例如：女儿、护工">
+            </label>
+            <div class="reminder-form-actions">
+                <button id="save-event-button" type="button">记录事件</button>
+            </div>
+        </div>
+        <div id="event-log-list" class="care-record-list"></div>
+    </article>
+
+    <article class="summary-note-card caregiver-card caregiver-card-span-two">
+        <p class="summary-note-label">重要对话摘要</p>
+        <div id="notes-log-list" class="log-list log-list-compact"></div>
+    </article>
+</section>
+{% endblock %}

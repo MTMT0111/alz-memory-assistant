@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header">
+    <div>
+        <p class="section-kicker">定位安全</p>
+        <h1>位置与防走失支持</h1>
+        <p class="subtitle">这里预留家属侧的位置安全能力。当前阶段只提供产品结构和占位信息，后续可接入真实设备、地图和定位上报服务。</p>
+    </div>
+</section>
+
+<section class="safety-layout caregiver-safety-layout">
+    <article class="dashboard-card caregiver-card safety-status-card">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">最近位置状态</p>
+                <h2>等待设备上报</h2>
+            </div>
+            <span class="status-pill warning">占位</span>
+        </div>
+        <div class="safety-status-grid">
+            <div class="safety-status-item">
+                <span>设备状态</span>
+                <strong>未连接</strong>
+            </div>
+            <div class="safety-status-item">
+                <span>最近一次上报</span>
+                <strong>暂无数据</strong>
+            </div>
+            <div class="safety-status-item">
+                <span>定位共享</span>
+                <strong>待授权</strong>
+            </div>
+        </div>
+    </article>
+
+    <article class="dashboard-card caregiver-card safety-map-card caregiver-card-span-two">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">地图区域</p>
+                <h2>未来地图与轨迹展示</h2>
+            </div>
+        </div>
+        <div class="mock-map-panel" aria-label="地图占位区域">
+            <div class="mock-map-grid"></div>
+            <div class="mock-map-marker">
+                <span></span>
+                <strong>Last seen</strong>
+            </div>
+            <p>地图 SDK 尚未接入。这里保留未来显示实时位置、安全区域和最近路线的位置。</p>
+        </div>
+    </article>
+
+    <article class="dashboard-card caregiver-card safety-settings-card">
+        <p class="card-kicker">安全区域</p>
+        <h2>常去地点与边界</h2>
+        <div class="safety-list">
+            <div class="safety-list-row">
+                <span>家庭住址</span>
+                <strong>待设置</strong>
+            </div>
+            <div class="safety-list-row">
+                <span>常去地点</span>
+                <strong>待设置</strong>
+            </div>
+            <div class="safety-list-row">
+                <span>安全范围</span>
+                <strong>待设置</strong>
+            </div>
+        </div>
+    </article>
+
+    <article class="dashboard-card caregiver-card safety-settings-card">
+        <p class="card-kicker">紧急联系人</p>
+        <h2>异常情况通知对象</h2>
+        <div class="safety-list">
+            <div class="safety-list-row">
+                <span>第一联系人</span>
+                <strong>待填写</strong>
+            </div>
+            <div class="safety-list-row">
+                <span>备用联系人</span>
+                <strong>待填写</strong>
+            </div>
+            <div class="safety-list-row">
+                <span>通知方式</span>
+                <strong>待接入</strong>
+            </div>
+        </div>
+    </article>
+
+    <article class="dashboard-card caregiver-card safety-settings-card">
+        <p class="card-kicker">离家倾向事件</p>
+        <h2>快速记录位置相关风险</h2>
+        <p class="summary-note-text">如果出现离家倾向或找不到人，可以先在这里记录一条事件，后续会进入照护日志与周摘要。</p>
+        <button id="wandering-event-button" type="button">记录离家倾向</button>
+    </article>
+
+    <article class="dashboard-card caregiver-card safety-settings-card caregiver-card-span-two">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">权限与说明</p>
+                <h2>定位能力需要明确授权</h2>
+            </div>
+            <button type="button" class="toggle-chip" aria-pressed="false">未开启</button>
+        </div>
+        <p class="summary-note-text">定位安全是家属侧辅助能力，不会显示在患者主对话页。本轮仅保留结构，真实定位、地图、围栏提醒和设备在线状态需要后续接入专门服务。</p>
+    </article>
+</section>
+{% endblock %}

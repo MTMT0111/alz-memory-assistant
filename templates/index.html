@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header">
+    <div>
+        <p class="section-kicker">Caregiver Hub</p>
+        <h1>家属照护工作台</h1>
+        <p class="subtitle">这里集中处理照护侧需要的信息。患者仍然从对话页进入，家属则在这里维护档案、查看近期情况、安排提醒与关注趋势。</p>
+    </div>
+    <a class="ghost-button caregiver-primary-link" href="/conversation">返回患者对话页</a>
+</section>
+
+<section class="caregiver-overview-grid">
+    <article class="dashboard-card caregiver-card caregiver-card-wide">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">档案概览</p>
+                <h2>当前已登记的信息</h2>
+            </div>
+        </div>
+        <div id="dashboard-profile-card" class="soft-list caregiver-soft-list"></div>
+    </article>
+
+    <article class="dashboard-card caregiver-card">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">近期情况</p>
+                <h2>照护状态概览</h2>
+            </div>
+        </div>
+        <p id="recent-topics" class="summary-note-text">近期摘要会显示在这里。</p>
+        <div class="dashboard-mini-stats caregiver-mini-stats">
+            <div class="mini-stat">
+                <span>已启用提醒</span>
+                <strong id="analysis-reminder-count">0</strong>
+            </div>
+            <div class="mini-stat">
+                <span>近期异常记录</span>
+                <strong id="care-event-count">0</strong>
+            </div>
+            <div class="mini-stat">
+                <span>更容易接上的话题</span>
+                <strong id="care-overview-followup">待积累</strong>
+            </div>
+        </div>
+    </article>
+</section>
+
+<section class="caregiver-module-grid">
+    <a class="quick-link caregiver-module-link" href="/profile-editor">
+        <strong>档案</strong>
+        <span>维护基本信息、重要的人、熟悉经历、喜欢的事情和陪伴提醒。</span>
+    </a>
+    <a class="quick-link caregiver-module-link" href="/memory-notes">
+        <strong>近期摘要</strong>
+        <span>快速查看最近常提到的人、常聊的话题、容易卡住的点和整体情况。</span>
+    </a>
+    <a class="quick-link caregiver-module-link" href="/device-settings">
+        <strong>提醒中心</strong>
+        <span>创建吃药、喝水、作息、活动和稍后提醒，查看由谁设置。</span>
+    </a>
+    <a class="quick-link caregiver-module-link" href="/location-safety">
+        <strong>定位安全</strong>
+        <span>预留老人定位、防走失、安全区域和紧急联系人等家属侧能力。</span>
+    </a>
+    <a class="quick-link caregiver-module-link" href="/analysis">
+        <strong>周摘要</strong>
+        <span>查看本周互动情况、提醒安排、异常类型和可承接话题。</span>
+    </a>
+    <a class="quick-link caregiver-module-link" href="/llm-eval">
+        <strong>LLM Eval</strong>
+        <span>测试真实或 Mock LLM 在限制词、患者状态和照护场景下的回复质量。</span>
+    </a>
+</section>
+{% endblock %}

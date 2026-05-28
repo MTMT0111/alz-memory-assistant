@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="app-home-screen function-home-screen compact-home-screen">
+    <header class="function-home-hero compact-home-hero">
+        <div>
+            <p class="section-kicker">App Home</p>
+            <h1>阿尔兹海默症家庭陪伴与照护辅助系统</h1>
+            <p class="subtitle">患者端陪伴、家属端照护、个人记忆库三条主线。</p>
+            <div class="demo-patient-indicator">
+                <strong>当前 Demo 患者：</strong>李桂兰（李奶奶）
+            </div>
+        </div>
+        <a href="/conversation" class="patient-primary-entry function-primary-entry">开始陪伴对话</a>
+    </header>
+
+    <section class="compact-home-groups" aria-label="功能分类">
+        <section class="compact-home-group">
+            <h2>患者端稳定陪伴</h2>
+            <p class="compact-home-group-desc">用于患者日常对话、安抚、提醒询问和低刺激陪伴。</p>
+            <div class="compact-home-grid">
+                <a href="/conversation" class="function-option-card function-option-card-primary">
+                    <strong>开始陪伴对话</strong>
+                    <span>DeepSeek 主聊天，规则层兜底。</span>
+                </a>
+                <a href="/conversation?debug=1" class="function-option-card">
+                    <strong>调试对话模式</strong>
+                    <span>查看 provider、fallback 和链路状态。</span>
+                </a>
+            </div>
+        </section>
+
+        <section class="compact-home-group">
+            <h2>家属端照护闭环</h2>
+            <p class="compact-home-group-desc">用于查看今日提醒、风险事件和建议操作。</p>
+            <div class="compact-home-grid">
+                <a href="/analysis" class="function-option-card function-option-card-primary">
+                    <strong>今日照护面板</strong>
+                    <span>提醒确认、风险事件、建议操作。</span>
+                </a>
+                <a href="/demo-flow" class="function-option-card">
+                    <strong>演示流程</strong>
+                    <span>按 6 步展示照护闭环。</span>
+                </a>
+            </div>
+        </section>
+
+        <section class="compact-home-group">
+            <h2>个人记忆与回忆陪伴</h2>
+            <p class="compact-home-group-desc">用于维护熟悉素材、审核记忆候选，并进入回忆陪伴。</p>
+            <div class="compact-home-grid">
+                <a href="/materials" class="function-option-card function-option-card-primary">
+                    <strong>熟悉素材库</strong>
+                    <span>家属维护人物、老歌、旧经历。</span>
+                </a>
+                <a href="/reminiscence" class="function-option-card">
+                    <strong>回忆陪伴</strong>
+                    <span>选择已确认素材进入陪伴。</span>
+                </a>
+                <a href="/chat-history" class="function-option-card">
+                    <strong>聊天记录与记忆候选</strong>
+                    <span>从对话中审核可沉淀线索。</span>
+                </a>
+            </div>
+        </section>
+
+        <section class="compact-home-evidence" aria-label="测试与证据">
+            <span>测试与证据</span>
+            <a href="/test-results">测试结果</a>
+            <a href="/debug-dashboard">模型状态</a>
+        </section>
+    </section>
+</section>
+{% endblock %}

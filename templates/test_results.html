@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="test-results-shell">
+    <header class="test-results-header">
+        <div>
+            <p class="section-kicker">Evidence</p>
+            <h1>评估证据页</h1>
+            <p class="subtitle">这里不是开发日志，而是用来证明系统稳定性和照护适配性的测试证据。</p>
+        </div>
+    </header>
+
+    <section class="test-results-section test-results-priority-card" aria-labelledby="evidence-priority-title">
+        <div class="test-results-section-head">
+            <div>
+                <p class="card-kicker">核心证据</p>
+                <h2 id="evidence-priority-title">优先看这两个结果</h2>
+            </div>
+        </div>
+        <div class="test-results-priority-grid">
+            <article class="test-results-summary-card">
+                <span>DeepSeek Demo Patient</span>
+                <strong>PASS</strong>
+                <p>验证患者端典型照护场景下的稳定回复。</p>
+            </article>
+            <article class="test-results-summary-card">
+                <span>Controlled Comparison</span>
+                <strong>care_system 优于 baseline_direct_llm</strong>
+                <p>验证完整照护链路优于普通 LLM 直连。</p>
+            </article>
+        </div>
+    </section>
+
+    <section class="test-results-section" aria-labelledby="test-results-overview-title">
+        <div class="test-results-section-head">
+            <div>
+                <p class="card-kicker">评估总览</p>
+                <h2 id="test-results-overview-title">系统稳定性与照护适配性</h2>
+            </div>
+        </div>
+        <div id="test-results-overview-grid" class="test-results-overview-grid"></div>
+    </section>
+
+    <section id="deepseek-demo-report" class="test-results-section" aria-labelledby="deepseek-demo-title">
+        <div class="test-results-section-head">
+            <div>
+                <p class="card-kicker">DeepSeek Demo Patient 测试</p>
+                <h2 id="deepseek-demo-title">患者典型照护场景下的关键安全与质量指标</h2>
+            </div>
+        </div>
+        <div id="deepseek-demo-summary" class="test-results-report-summary"></div>
+        <div class="test-results-table-wrap">
+            <table class="test-results-metric-table">
+                <tbody id="deepseek-demo-metric-table"></tbody>
+            </table>
+        </div>
+        <details class="test-results-details">
+            <summary>查看 Markdown 原始报告</summary>
+            <pre id="deepseek-demo-markdown" class="debug-pre test-results-pre">加载后会显示 Markdown 报告。</pre>
+        </details>
+    </section>
+
+    <section id="controlled-comparison-report" class="test-results-section" aria-labelledby="controlled-comparison-title">
+        <div class="test-results-section-head">
+            <div>
+                <p class="card-kicker">Controlled Comparison 对照评估</p>
+                <h2 id="controlled-comparison-title">普通 LLM 与照护系统的对照证据</h2>
+            </div>
+        </div>
+        <div id="controlled-comparison-summary" class="test-results-report-summary"></div>
+        <p class="test-results-explainer">对照评估关注提醒状态、熟悉素材、风险规则、template fallback 和家属端事件带来的照护适配性提升。</p>
+        <div id="controlled-comparison-top-advantages" class="test-results-inline-list"></div>
+        <div class="test-results-table-wrap">
+            <table class="test-results-scenario-table">
+                <thead>
+                    <tr>
+                        <th>场景</th>
+                        <th>baseline_score</th>
+                        <th>care_system_score</th>
+                        <th>improvement</th>
+                        <th>关键差异</th>
+                    </tr>
+                </thead>
+                <tbody id="controlled-comparison-rows"></tbody>
+            </table>
+        </div>
+        <details class="test-results-details">
+            <summary>查看 Markdown 原始报告</summary>
+            <pre id="controlled-comparison-markdown" class="debug-pre test-results-pre">加载后会显示 Markdown 报告。</pre>
+        </details>
+    </section>
+
+    <section class="test-results-section" aria-labelledby="acceptance-title">
+        <div class="test-results-section-head">
+            <div>
+                <p class="card-kicker">系统验收脚本</p>
+                <h2 id="acceptance-title">验收命令与检查范围</h2>
+            </div>
+        </div>
+        <div id="acceptance-summary" class="test-results-report-summary"></div>
+        <div class="test-results-command-block">
+            <code>cd /root/alz-memory-assistant</code>
+            <code>source venv/bin/activate</code>
+            <code>venv/bin/python scripts/run_v05_acceptance_check.py</code>
+        </div>
+        <div id="acceptance-check-list" class="test-results-inline-list"></div>
+    </section>
+
+    <section class="test-results-section" aria-labelledby="report-files-title">
+        <div class="test-results-section-head">
+            <div>
+                <p class="card-kicker">报告文件列表与运行命令</p>
+                <h2 id="report-files-title">其他报告文件</h2>
+            </div>
+        </div>
+        <div class="test-results-table-wrap">
+            <table class="test-results-file-table">
+                <thead>
+                    <tr>
+                        <th>文件名</th>
+                        <th>状态</th>
+                        <th>修改时间</th>
+                        <th>大小</th>
+                        <th>说明</th>
+                        <th>查看</th>
+                    </tr>
+                </thead>
+                <tbody id="test-results-file-table"></tbody>
+            </table>
+        </div>
+        <details class="test-results-details">
+            <summary>查看所选文件原文</summary>
+            <pre id="test-results-preview" class="debug-pre test-results-pre">点击文件列表中的“查看”按钮。</pre>
+        </details>
+    </section>
+</section>
+{% endblock %}

@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="conversation-device-shell">
+    <div class="device-top-status-bar" aria-label="当前状态">
+        <div class="conversation-top-actions">
+            <a class="ghost-button conversation-home-link" href="/app_home">首页</a>
+            <a class="ghost-button conversation-home-link" href="/analysis">家属端</a>
+            <a class="ghost-button conversation-home-link" href="/materials">素材库</a>
+        </div>
+        <div class="device-top-status-info">
+            <span class="device-top-hint" id="patient-name-hint">李奶奶 · 陪伴中 · 当前模型 DeepSeek</span>
+            <span id="conversation-provider-hint" class="device-top-hint">当前模型：读取中</span>
+        </div>
+        {% if debug_mode %}
+        <a class="ghost-button conversation-debug-link" href="/conversation">普通模式</a>
+        {% else %}
+        <a class="ghost-button conversation-debug-link" href="/conversation?debug=1">调试信息</a>
+        {% endif %}
+    </div>
+
+    <details id="conversation-model-status" class="conversation-model-status" {% if not debug_mode %}open{% endif %}>
+        <summary>
+            <span>{% if debug_mode %}调试信息{% else %}模型状态{% endif %}</span>
+            <strong id="conversation-model-status-line">当前模型：DeepSeek · 读取中</strong>
+        </summary>
+        <div class="conversation-model-grid" {% if not debug_mode %}hidden{% endif %}>
+            <span>actual_provider</span><strong id="conversation-model-provider">-</strong>
+            <span>Model</span><strong id="conversation-model-name">-</strong>
+            <span>fallback_used</span><strong id="conversation-model-fallback">-</strong>
+            <span>fallback_reason</span><strong id="conversation-debug-reason">-</strong>
+            <span>postprocess_used</span><strong id="conversation-model-postprocess">-</strong>
+            <span>template_used / state</span><strong id="conversation-model-strategy">-</strong>
+            <span>context_items_count</span><strong id="conversation-debug-context-count">-</strong>
+            <span>materials_used</span><strong id="conversation-debug-materials">-</strong>
+            <span>reminder_status</span><strong id="conversation-debug-reminder">-</strong>
+            <span>耗时</span><strong id="conversation-model-latency">-</strong>
+        </div>
+        <div id="conversation-debug-details" class="conversation-debug-details" {% if not debug_mode %}hidden{% endif %}>
+            <div>
+                <strong>说明</strong>
+                <p>这里只显示链路状态，不展示原始大段模型回复。需要完整诊断请打开 debug-dashboard。</p>
+            </div>
+            <div>
+                <strong>Caregiver Events</strong>
+                <p id="conversation-debug-caregiver">暂无</p>
+            </div>
+        </div>
+    </details>
+
+    <section class="chat-panel chat-panel-device">
+        <div class="conversation-quick-tests" aria-label="快捷测试">
+            <button type="button" class="conversation-quick-test" data-message="小雨什么时候回来？">小雨什么时候回来？</button>
+            <button type="button" class="conversation-quick-test" data-message="我是不是还没吃药？">我是不是还没吃药？</button>
+            <button type="button" class="conversation-quick-test" data-message="我要回家">我要回家</button>
+            <button type="button" class="conversation-quick-test" data-message="我有点害怕">我有点害怕</button>
+            <button type="button" class="conversation-quick-test" data-message="我想听老歌">我想听老歌</button>
+            <button type="button" class="conversation-quick-test" data-message="想聊以前的事">想聊以前的事</button>
+        </div>
+        <div id="chat-box" class="chat-box-device"></div>
+
+        <div class="device-control-dock" aria-label="对话控制区">
+            <div class="input-row input-row-chat input-row-device">
+                <button id="voice-button" type="button" class="voice-placeholder-button inline-voice-button device-voice-button">麦克风</button>
+                <input id="input" type="text" placeholder="想起谁了？或者想说哪件事？">
+                <button id="send-button" type="button">发送</button>
+            </div>
+            <div id="device-dock-status" class="device-dock-status" aria-live="polite" data-state="idle">
+                <div class="device-dock-state">
+                    <span class="chat-status-dot"></span>
+                    <span id="chat-status-text">陪伴中</span>
+                </div>
+                <span id="composer-help-text" class="device-help-text">按 Enter 发送</span>
+                <label class="tts-toggle" for="tts-enabled-toggle">
+                    <input id="tts-enabled-toggle" type="checkbox" checked>
+                    <span>语音朗读</span>
+                </label>
+                <span id="tts-fallback-status" class="device-help-text">语音朗读：浏览器朗读 / MiniMax TTS 待接入</span>
+                <button id="stop-speaking-button" type="button" class="dock-quiet-button" disabled>停止</button>
+            </div>
+            <div id="voice-status-strip" class="voice-status-strip" aria-live="polite">
+                <span class="voice-status-chip">
+                    <strong>状态</strong>
+                    <span id="voice-strip-state">陪伴中</span>
+                </span>
+                <span class="voice-status-chip">
+                    <strong>播放</strong>
+                    <span id="voice-strip-playing">未播放</span>
+                </span>
+                <span class="voice-status-chip">
+                    <strong>可打断</strong>
+                    <span id="voice-strip-interruptible">可以</span>
+                </span>
+            </div>
+            <details id="voice-debug-panel" class="voice-debug-panel" hidden>
+                <summary>语音调试信息</summary>
+                <div class="voice-debug-toolbar">
+                    <button id="voice-debug-copy-button" type="button" class="ghost-button voice-debug-copy-button">复制本次诊断结果</button>
+                    <span id="voice-debug-copy-status" class="voice-debug-copy-status" aria-live="polite"> </span>
+                </div>
+                <div class="voice-debug-grid">
+                    <div class="voice-debug-card">
+                        <span class="voice-debug-label">当前状态</span>
+                        <strong id="voice-debug-current-state">idle</strong>
+                    </div>
+                    <div class="voice-debug-card">
+                        <span class="voice-debug-label">当前步骤</span>
+                        <strong id="voice-debug-current-step">idle</strong>
+                    </div>
+                    <div class="voice-debug-card">
+                        <span class="voice-debug-label">错误码</span>
+                        <strong id="voice-debug-error-code">-</strong>
+                    </div>
+                    <div class="voice-debug-card">
+                        <span class="voice-debug-label">Fallback</span>
+                        <strong id="voice-debug-fallback-used">false</strong>
+                    </div>
+                    <div class="voice-debug-card">
+                        <span class="voice-debug-label">ASR Provider / Model</span>
+                        <strong id="voice-debug-asr-provider-model">-</strong>
+                    </div>
+                    <div class="voice-debug-card">
+                        <span class="voice-debug-label">TTS Provider / Model</span>
+                        <strong id="voice-debug-tts-provider-model">-</strong>
+                    </div>
+                </div>
+                <div class="voice-debug-stack">
+                    <div class="voice-debug-block">
+                        <span class="voice-debug-label">ASR</span>
+                        <pre id="voice-debug-asr-block">-</pre>
+                    </div>
+                    <div class="voice-debug-block">
+                        <span class="voice-debug-label">Chat / LLM</span>
+                        <pre id="voice-debug-chat-block">-</pre>
+                    </div>
+                    <div class="voice-debug-block">
+                        <span class="voice-debug-label">TTS</span>
+                        <pre id="voice-debug-tts-block">-</pre>
+                    </div>
+                    <div class="voice-debug-block">
+                        <span class="voice-debug-label">Overall</span>
+                        <pre id="voice-debug-overall-block">-</pre>
+                    </div>
+                    <div class="voice-debug-block">
+                        <span class="voice-debug-label">Diagnosis</span>
+                        <pre id="voice-debug-diagnosis-block">-</pre>
+                    </div>
+                    <div class="voice-debug-block">
+                        <span class="voice-debug-label">最近埋点</span>
+                        <pre id="voice-debug-events">-</pre>
+                    </div>
+                </div>
+            </details>
+        </div>
+    </section>
+</section>
+{% endblock %}

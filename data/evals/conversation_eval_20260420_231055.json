@@ -1,0 +1,1518 @@
+{
+  "generated_at": "2026-04-20T23:10:55",
+  "providers": [
+    "mock",
+    "zhipu",
+    "deepseek",
+    "openai"
+  ],
+  "scoring_dimensions": [
+    "当前输入是否被正确接住",
+    "是否自然",
+    "是否没有脚本腔",
+    "是否没有后台材料泄漏",
+    "是否符合 Alzheimer 陪伴场景"
+  ],
+  "records": [
+    {
+      "provider": "mock",
+      "case_id": "clarification_001",
+      "case_type": "clarification",
+      "input_text": "那是谁",
+      "evaluation_focus": [
+        "是否优先澄清上一句",
+        "是否没有切新话题",
+        "是否短答且自然"
+      ],
+      "model_reply": "我换个说法接你这句。我刚刚提到的是你女儿小雨在上海工作。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "clarification_002",
+      "case_type": "clarification",
+      "input_text": "你再说什么",
+      "evaluation_focus": [
+        "是否能重说上一句",
+        "是否没有机械复读整段长话",
+        "是否避免脚本腔"
+      ],
+      "model_reply": "我刚刚提到的是你以前喜欢热汤面。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "clarification_003",
+      "case_type": "clarification",
+      "input_text": "什么意思",
+      "evaluation_focus": [
+        "是否围绕上一句做短解释",
+        "是否不过度延展",
+        "是否保持自然对话感"
+      ],
+      "model_reply": "刚才那句说的是我刚刚提到你以前在南京商场上班。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "need_request_001",
+      "case_type": "need_request",
+      "input_text": "我饿了",
+      "evaluation_focus": [
+        "是否优先回应当前需求",
+        "是否没有被旧记忆锚点拖走",
+        "是否给出自然的下一步承接"
+      ],
+      "model_reply": "先让自己垫一口吧。要不要先找点你平时顺口的东西？要是想到喜欢热汤，我们就先从那个开始。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "need_request_002",
+      "case_type": "need_request",
+      "input_text": "我累了",
+      "evaluation_focus": [
+        "是否先照顾眼前状态",
+        "是否不跳去回忆引导",
+        "是否语气温和简短"
+      ],
+      "model_reply": "先坐稳一点，缓口气。你想先坐一坐，还是先闭眼歇会儿？等缓过来，再说熟悉的人和事也不迟。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "need_request_003",
+      "case_type": "need_request",
+      "input_text": "我不舒服",
+      "evaluation_focus": [
+        "是否优先回应不适",
+        "是否避免空泛安抚",
+        "是否没有脚本化提问"
+      ],
+      "model_reply": "那先让自己缓一缓。哪里不得劲，你只说一点点也行。先把这会儿安顿好，别的等会儿再说。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "memory_question_001",
+      "case_type": "memory_question",
+      "input_text": "我是谁",
+      "evaluation_focus": [
+        "是否直接回答身份问题",
+        "是否不绕弯子",
+        "是否符合 Alzheimer 场景的温和表达"
+      ],
+      "model_reply": "在我这里记着的称呼是王阿姨。这个称呼一出来，你先想到的是谁？",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "memory_question_002",
+      "case_type": "memory_question",
+      "input_text": "我女儿是谁",
+      "evaluation_focus": [
+        "是否直接回答家人关系",
+        "是否没有字段腔",
+        "是否不把后台资料整段念出来"
+      ],
+      "model_reply": "我记得女儿小雨在上海工作。这个人平时最常陪你做什么？",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "memory_question_003",
+      "case_type": "memory_question",
+      "input_text": "我以前做什么的",
+      "evaluation_focus": [
+        "是否能利用 profile 回答",
+        "是否表达自然",
+        "是否不过度文学化"
+      ],
+      "model_reply": "刚才那句说的是刚刚那句。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "short_input_001",
+      "case_type": "short_input",
+      "input_text": "嗯",
+      "evaluation_focus": [
+        "是否能自然接住短输入",
+        "是否在合适时才轻引导",
+        "是否没有模板腔"
+      ],
+      "model_reply": "女儿小雨在上海工作这件事，我们可以接着说。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "short_input_002",
+      "case_type": "short_input",
+      "input_text": "哦",
+      "evaluation_focus": [
+        "是否不空泛",
+        "是否顺着已有话题继续",
+        "是否不过度解释系统行为"
+      ],
+      "model_reply": "我刚刚想到的是女儿小雨在上海工作。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "short_input_003",
+      "case_type": "short_input",
+      "input_text": "不知道",
+      "evaluation_focus": [
+        "是否在不施压的前提下轻引导",
+        "是否没有测试感",
+        "是否保持简短"
+      ],
+      "model_reply": "女儿小雨在上海工作这件事，我们可以接着说。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "emotional_001",
+      "case_type": "emotional",
+      "input_text": "你在说什么",
+      "evaluation_focus": [
+        "是否先接住不满或困惑",
+        "是否能回到清楚短答",
+        "是否不继续脚本式引导"
+      ],
+      "model_reply": "刚才那句说的是我刚刚提到你以前喜欢下班后喝热汤。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "emotional_002",
+      "case_type": "emotional",
+      "input_text": "你是不是弄错了",
+      "evaluation_focus": [
+        "是否不争辩",
+        "是否不直接纠错用户",
+        "是否自然修正或缓和承接"
+      ],
+      "model_reply": "你要是嫌我刚刚说得虚了，我们就换成眼前这会儿的话。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "emotional_003",
+      "case_type": "emotional",
+      "input_text": "我是不是忘了什么",
+      "evaluation_focus": [
+        "是否避免测试感",
+        "是否不过度安抚",
+        "是否给出温和承接"
+      ],
+      "model_reply": "刚才那句说的是刚刚那句。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "clarification_001",
+      "case_type": "clarification",
+      "input_text": "那是谁",
+      "evaluation_focus": [
+        "是否优先澄清上一句",
+        "是否没有切新话题",
+        "是否短答且自然"
+      ],
+      "model_reply": "刚才那句说的是你女儿小雨在上海工作。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "clarification_002",
+      "case_type": "clarification",
+      "input_text": "你再说什么",
+      "evaluation_focus": [
+        "是否能重说上一句",
+        "是否没有机械复读整段长话",
+        "是否避免脚本腔"
+      ],
+      "model_reply": "我刚刚提到的是你以前喜欢热汤面。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "clarification_003",
+      "case_type": "clarification",
+      "input_text": "什么意思",
+      "evaluation_focus": [
+        "是否围绕上一句做短解释",
+        "是否不过度延展",
+        "是否保持自然对话感"
+      ],
+      "model_reply": "刚才那句说的是我刚刚提到你以前在南京商场上班。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "need_request_001",
+      "case_type": "need_request",
+      "input_text": "我饿了",
+      "evaluation_focus": [
+        "是否优先回应当前需求",
+        "是否没有被旧记忆锚点拖走",
+        "是否给出自然的下一步承接"
+      ],
+      "model_reply": "先让自己垫一口吧。你想先吃口软一点的，还是先喝点热的？要是想到喜欢热汤，我们就先从那个开始。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "need_request_002",
+      "case_type": "need_request",
+      "input_text": "我累了",
+      "evaluation_focus": [
+        "是否先照顾眼前状态",
+        "是否不跳去回忆引导",
+        "是否语气温和简短"
+      ],
+      "model_reply": "那先让自己松一松。你想先坐一坐，还是先闭眼歇会儿？等缓过来，再说熟悉的人和事也不迟。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "need_request_003",
+      "case_type": "need_request",
+      "input_text": "我不舒服",
+      "evaluation_focus": [
+        "是否优先回应不适",
+        "是否避免空泛安抚",
+        "是否没有脚本化提问"
+      ],
+      "model_reply": "那先顾着舒服一点。是想先坐一会儿，还是先叫身边的人来看看？先把这会儿安顿好，别的等会儿再说。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "memory_question_001",
+      "case_type": "memory_question",
+      "input_text": "我是谁",
+      "evaluation_focus": [
+        "是否直接回答身份问题",
+        "是否不绕弯子",
+        "是否符合 Alzheimer 场景的温和表达"
+      ],
+      "model_reply": "我这边记着别人叫你王阿姨。这个称呼一出来，你先想到的是谁？",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "memory_question_002",
+      "case_type": "memory_question",
+      "input_text": "我女儿是谁",
+      "evaluation_focus": [
+        "是否直接回答家人关系",
+        "是否没有字段腔",
+        "是否不把后台资料整段念出来"
+      ],
+      "model_reply": "我记得女儿小雨在上海工作。你先想到的，是和这个人在一起的哪件小事？",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "memory_question_003",
+      "case_type": "memory_question",
+      "input_text": "我以前做什么的",
+      "evaluation_focus": [
+        "是否能利用 profile 回答",
+        "是否表达自然",
+        "是否不过度文学化"
+      ],
+      "model_reply": "我刚刚提到的是刚刚那句。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "short_input_001",
+      "case_type": "short_input",
+      "input_text": "嗯",
+      "evaluation_focus": [
+        "是否能自然接住短输入",
+        "是否在合适时才轻引导",
+        "是否没有模板腔"
+      ],
+      "model_reply": "女儿小雨在上海工作，是你很熟的人。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "short_input_002",
+      "case_type": "short_input",
+      "input_text": "哦",
+      "evaluation_focus": [
+        "是否不空泛",
+        "是否顺着已有话题继续",
+        "是否不过度解释系统行为"
+      ],
+      "model_reply": "我刚刚想到的是女儿小雨在上海工作。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "short_input_003",
+      "case_type": "short_input",
+      "input_text": "不知道",
+      "evaluation_focus": [
+        "是否在不施压的前提下轻引导",
+        "是否没有测试感",
+        "是否保持简短"
+      ],
+      "model_reply": "我刚刚想到的是女儿小雨在上海工作。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "emotional_001",
+      "case_type": "emotional",
+      "input_text": "你在说什么",
+      "evaluation_focus": [
+        "是否先接住不满或困惑",
+        "是否能回到清楚短答",
+        "是否不继续脚本式引导"
+      ],
+      "model_reply": "我刚刚提到的是我刚刚提到你以前喜欢下班后喝热汤。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "emotional_002",
+      "case_type": "emotional",
+      "input_text": "你是不是弄错了",
+      "evaluation_focus": [
+        "是否不争辩",
+        "是否不直接纠错用户",
+        "是否自然修正或缓和承接"
+      ],
+      "model_reply": "你要是嫌我刚刚说得虚了，我们就换成眼前这会儿的话。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "zhipu",
+      "case_id": "emotional_003",
+      "case_type": "emotional",
+      "input_text": "我是不是忘了什么",
+      "evaluation_focus": [
+        "是否避免测试感",
+        "是否不过度安抚",
+        "是否给出温和承接"
+      ],
+      "model_reply": "刚才那句说的是刚刚那句。",
+      "requested_provider": "zhipu",
+      "actual_provider": "mock",
+      "model": "glm-4",
+      "fallback_used": true,
+      "fallback_reason": "zhipu API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "clarification_001",
+      "case_type": "clarification",
+      "input_text": "那是谁",
+      "evaluation_focus": [
+        "是否优先澄清上一句",
+        "是否没有切新话题",
+        "是否短答且自然"
+      ],
+      "model_reply": "这回我说得再直接一点。刚才那句说的是你女儿小雨在上海工作。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "clarification_002",
+      "case_type": "clarification",
+      "input_text": "你再说什么",
+      "evaluation_focus": [
+        "是否能重说上一句",
+        "是否没有机械复读整段长话",
+        "是否避免脚本腔"
+      ],
+      "model_reply": "这回我说得再直接一点。刚才那句说的是你以前喜欢热汤面。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "clarification_003",
+      "case_type": "clarification",
+      "input_text": "什么意思",
+      "evaluation_focus": [
+        "是否围绕上一句做短解释",
+        "是否不过度延展",
+        "是否保持自然对话感"
+      ],
+      "model_reply": "我刚刚提到的是我刚刚提到你以前在南京商场上班。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "need_request_001",
+      "case_type": "need_request",
+      "input_text": "我饿了",
+      "evaluation_focus": [
+        "是否优先回应当前需求",
+        "是否没有被旧记忆锚点拖走",
+        "是否给出自然的下一步承接"
+      ],
+      "model_reply": "那先顾着肚子。要不要先找点你平时顺口的东西？要是想到喜欢热汤，我们就先从那个开始。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "need_request_002",
+      "case_type": "need_request",
+      "input_text": "我累了",
+      "evaluation_focus": [
+        "是否先照顾眼前状态",
+        "是否不跳去回忆引导",
+        "是否语气温和简短"
+      ],
+      "model_reply": "先坐稳一点，缓口气。要不要先靠一会儿，我们等会儿再接着说。等缓过来，再说熟悉的人和事也不迟。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "need_request_003",
+      "case_type": "need_request",
+      "input_text": "我不舒服",
+      "evaluation_focus": [
+        "是否优先回应不适",
+        "是否避免空泛安抚",
+        "是否没有脚本化提问"
+      ],
+      "model_reply": "那先让自己缓一缓。哪里不得劲，你只说一点点也行。先把这会儿安顿好，别的等会儿再说。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "memory_question_001",
+      "case_type": "memory_question",
+      "input_text": "我是谁",
+      "evaluation_focus": [
+        "是否直接回答身份问题",
+        "是否不绕弯子",
+        "是否符合 Alzheimer 场景的温和表达"
+      ],
+      "model_reply": "在我这里记着的称呼是王阿姨。要不就从这个称呼带出来的人说起。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "memory_question_002",
+      "case_type": "memory_question",
+      "input_text": "我女儿是谁",
+      "evaluation_focus": [
+        "是否直接回答家人关系",
+        "是否没有字段腔",
+        "是否不把后台资料整段念出来"
+      ],
+      "model_reply": "在我这里留着的线索是女儿小雨在上海工作。要不就从这个人说起。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "memory_question_003",
+      "case_type": "memory_question",
+      "input_text": "我以前做什么的",
+      "evaluation_focus": [
+        "是否能利用 profile 回答",
+        "是否表达自然",
+        "是否不过度文学化"
+      ],
+      "model_reply": "刚才那句说的是刚刚那句。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "short_input_001",
+      "case_type": "short_input",
+      "input_text": "嗯",
+      "evaluation_focus": [
+        "是否能自然接住短输入",
+        "是否在合适时才轻引导",
+        "是否没有模板腔"
+      ],
+      "model_reply": "女儿小雨在上海工作这件事，我们可以接着说。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "short_input_002",
+      "case_type": "short_input",
+      "input_text": "哦",
+      "evaluation_focus": [
+        "是否不空泛",
+        "是否顺着已有话题继续",
+        "是否不过度解释系统行为"
+      ],
+      "model_reply": "女儿小雨在上海工作这件事，我们可以接着说。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "short_input_003",
+      "case_type": "short_input",
+      "input_text": "不知道",
+      "evaluation_focus": [
+        "是否在不施压的前提下轻引导",
+        "是否没有测试感",
+        "是否保持简短"
+      ],
+      "model_reply": "我刚刚想到的是女儿小雨在上海工作。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "emotional_001",
+      "case_type": "emotional",
+      "input_text": "你在说什么",
+      "evaluation_focus": [
+        "是否先接住不满或困惑",
+        "是否能回到清楚短答",
+        "是否不继续脚本式引导"
+      ],
+      "model_reply": "刚才那句说的是我刚刚提到你以前喜欢下班后喝热汤。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "emotional_002",
+      "case_type": "emotional",
+      "input_text": "你是不是弄错了",
+      "evaluation_focus": [
+        "是否不争辩",
+        "是否不直接纠错用户",
+        "是否自然修正或缓和承接"
+      ],
+      "model_reply": "你要是嫌我刚刚说得虚了，我们就换成眼前这会儿的话。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "deepseek",
+      "case_id": "emotional_003",
+      "case_type": "emotional",
+      "input_text": "我是不是忘了什么",
+      "evaluation_focus": [
+        "是否避免测试感",
+        "是否不过度安抚",
+        "是否给出温和承接"
+      ],
+      "model_reply": "我刚刚提到的是刚刚那句。",
+      "requested_provider": "deepseek",
+      "actual_provider": "mock",
+      "model": "deepseek-chat",
+      "fallback_used": true,
+      "fallback_reason": "deepseek API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "clarification_001",
+      "case_type": "clarification",
+      "input_text": "那是谁",
+      "evaluation_focus": [
+        "是否优先澄清上一句",
+        "是否没有切新话题",
+        "是否短答且自然"
+      ],
+      "model_reply": "刚才那句说的是你女儿小雨在上海工作。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "clarification_002",
+      "case_type": "clarification",
+      "input_text": "你再说什么",
+      "evaluation_focus": [
+        "是否能重说上一句",
+        "是否没有机械复读整段长话",
+        "是否避免脚本腔"
+      ],
+      "model_reply": "我换个说法接你这句。刚才那句说的是你以前喜欢热汤面。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "clarification_003",
+      "case_type": "clarification",
+      "input_text": "什么意思",
+      "evaluation_focus": [
+        "是否围绕上一句做短解释",
+        "是否不过度延展",
+        "是否保持自然对话感"
+      ],
+      "model_reply": "我刚刚说的是我刚刚提到你以前在南京商场上班。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "need_request_001",
+      "case_type": "need_request",
+      "input_text": "我饿了",
+      "evaluation_focus": [
+        "是否优先回应当前需求",
+        "是否没有被旧记忆锚点拖走",
+        "是否给出自然的下一步承接"
+      ],
+      "model_reply": "那先吃点东西更要紧。你想先吃口软一点的，还是先喝点热的？要是想到喜欢热汤，我们就先从那个开始。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "need_request_002",
+      "case_type": "need_request",
+      "input_text": "我累了",
+      "evaluation_focus": [
+        "是否先照顾眼前状态",
+        "是否不跳去回忆引导",
+        "是否语气温和简短"
+      ],
+      "model_reply": "那先歇一歇。要不要先靠一会儿，我们等会儿再接着说。等缓过来，再说熟悉的人和事也不迟。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "need_request_003",
+      "case_type": "need_request",
+      "input_text": "我不舒服",
+      "evaluation_focus": [
+        "是否优先回应不适",
+        "是否避免空泛安抚",
+        "是否没有脚本化提问"
+      ],
+      "model_reply": "那先让自己缓一缓。哪里不得劲，你只说一点点也行。先把这会儿安顿好，别的等会儿再说。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "memory_question_001",
+      "case_type": "memory_question",
+      "input_text": "我是谁",
+      "evaluation_focus": [
+        "是否直接回答身份问题",
+        "是否不绕弯子",
+        "是否符合 Alzheimer 场景的温和表达"
+      ],
+      "model_reply": "在我这里记着的称呼是王阿姨。要不就从这个称呼带出来的人说起。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "memory_question_002",
+      "case_type": "memory_question",
+      "input_text": "我女儿是谁",
+      "evaluation_focus": [
+        "是否直接回答家人关系",
+        "是否没有字段腔",
+        "是否不把后台资料整段念出来"
+      ],
+      "model_reply": "我记得女儿小雨在上海工作。你先想到的，是和这个人在一起的哪件小事？",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "memory_question_003",
+      "case_type": "memory_question",
+      "input_text": "我以前做什么的",
+      "evaluation_focus": [
+        "是否能利用 profile 回答",
+        "是否表达自然",
+        "是否不过度文学化"
+      ],
+      "model_reply": "刚才那句说的是刚刚那句。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "short_input_001",
+      "case_type": "short_input",
+      "input_text": "嗯",
+      "evaluation_focus": [
+        "是否能自然接住短输入",
+        "是否在合适时才轻引导",
+        "是否没有模板腔"
+      ],
+      "model_reply": "女儿小雨在上海工作这件事，我们可以接着说。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "short_input_002",
+      "case_type": "short_input",
+      "input_text": "哦",
+      "evaluation_focus": [
+        "是否不空泛",
+        "是否顺着已有话题继续",
+        "是否不过度解释系统行为"
+      ],
+      "model_reply": "女儿小雨在上海工作这件事，我们可以接着说。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "short_input_003",
+      "case_type": "short_input",
+      "input_text": "不知道",
+      "evaluation_focus": [
+        "是否在不施压的前提下轻引导",
+        "是否没有测试感",
+        "是否保持简短"
+      ],
+      "model_reply": "女儿小雨在上海工作，是你很熟的人。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "emotional_001",
+      "case_type": "emotional",
+      "input_text": "你在说什么",
+      "evaluation_focus": [
+        "是否先接住不满或困惑",
+        "是否能回到清楚短答",
+        "是否不继续脚本式引导"
+      ],
+      "model_reply": "刚才那句说的是我刚刚提到你以前喜欢下班后喝热汤。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "emotional_002",
+      "case_type": "emotional",
+      "input_text": "你是不是弄错了",
+      "evaluation_focus": [
+        "是否不争辩",
+        "是否不直接纠错用户",
+        "是否自然修正或缓和承接"
+      ],
+      "model_reply": "你现在最想听清哪一句，我就接那一句。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    },
+    {
+      "provider": "openai",
+      "case_id": "emotional_003",
+      "case_type": "emotional",
+      "input_text": "我是不是忘了什么",
+      "evaluation_focus": [
+        "是否避免测试感",
+        "是否不过度安抚",
+        "是否给出温和承接"
+      ],
+      "model_reply": "我刚刚提到的是刚刚那句。",
+      "requested_provider": "openai",
+      "actual_provider": "mock",
+      "model": "gpt-4o-mini",
+      "fallback_used": true,
+      "fallback_reason": "openai API key missing",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": ""
+      }
+    }
+  ]
+}

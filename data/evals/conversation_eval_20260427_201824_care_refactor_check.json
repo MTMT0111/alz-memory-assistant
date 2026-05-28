@@ -1,0 +1,82 @@
+{
+  "generated_at": "2026-04-27T20:18:24",
+  "providers": [
+    "mock"
+  ],
+  "provider_status": [
+    {
+      "provider": "mock",
+      "available": true,
+      "reason": "mock provider is always available",
+      "model": "mock",
+      "base_url": ""
+    }
+  ],
+  "selected_case_ids": [
+    "clarification_001",
+    "clarification_002"
+  ],
+  "run_tag": "care_refactor_check",
+  "scoring_dimensions": [
+    "当前输入是否被正确接住",
+    "是否自然",
+    "是否没有脚本腔",
+    "是否没有后台材料泄漏",
+    "是否符合 Alzheimer 陪伴场景",
+    "总体推荐度（1-5）"
+  ],
+  "records": [
+    {
+      "provider": "mock",
+      "case_id": "clarification_001",
+      "case_type": "clarification",
+      "input_text": "那是谁",
+      "evaluation_focus": [
+        "是否优先澄清上一句",
+        "是否没有切新话题",
+        "是否短答且自然"
+      ],
+      "model_reply": "我换个说法接你这句。刚才那句说的是你女儿小雨在上海工作。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": "",
+        "总体推荐度（1-5）": ""
+      }
+    },
+    {
+      "provider": "mock",
+      "case_id": "clarification_002",
+      "case_type": "clarification",
+      "input_text": "你再说什么",
+      "evaluation_focus": [
+        "是否能重说上一句",
+        "是否没有机械复读整段长话",
+        "是否避免脚本腔"
+      ],
+      "model_reply": "刚才那句说的是你以前喜欢热汤面。",
+      "requested_provider": "mock",
+      "actual_provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "notes": "",
+      "scoring": {
+        "当前输入是否被正确接住": "",
+        "是否自然": "",
+        "是否没有脚本腔": "",
+        "是否没有后台材料泄漏": "",
+        "是否符合 Alzheimer 陪伴场景": "",
+        "总体推荐度（1-5）": ""
+      }
+    }
+  ]
+}

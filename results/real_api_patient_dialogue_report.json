@@ -1,0 +1,864 @@
+{
+  "patient_id": "demo_patient_001",
+  "provider": "mock",
+  "model": "mock",
+  "provider_available": true,
+  "provider_availability_reason": "mock provider is always available",
+  "provider_status": {
+    "provider": "mock",
+    "model": "mock",
+    "api_configured": false,
+    "real_api_called": false,
+    "fallback_used": false,
+    "fallback_reasons": []
+  },
+  "real_success_count": 9,
+  "total_turns": 9,
+  "average_quality_score": 10,
+  "fallback_count": 0,
+  "risk_events_count": 6,
+  "reminder_events_count": 1,
+  "caregiver_summary": {
+    "patient_id": "demo_patient_001",
+    "today_summary": "今天李奶奶重复询问女儿小雨回家时间 2 次，出现 1 次想回家或位置困惑表达，出现 1 次不安表达，询问过是否吃药，出现 1 次外出意图，出现 1 次怀疑物品被拿走的表达。建议家属查看是否有未满足需求，并补充一段语音留言或提醒卡片。 建议家属进行语音安抚，并查看是否有环境、疼痛或等待家人等诱因。",
+    "risk_level": "high",
+    "top_events": [
+      {
+        "id": "ce_ffbb08cea2c8",
+        "patient_id": "demo_patient_001",
+        "user_profile_id": 33,
+        "event_type": "repeated_question",
+        "severity": "medium",
+        "title": "重复询问家人回家时间",
+        "description": "患者连续询问女儿小雨回家时间，可能存在等待焦虑或需要明确提醒。",
+        "source_message": "小雨什么时候回来？",
+        "source_turn": "chat_log:903",
+        "assistant_reply": "小雨晚上会打电话。我们先看着这个提醒，也可以请她留一段语音给你。",
+        "suggested_action": "建议家属查看是否有未满足需求，并补充一段语音留言或提醒卡片。",
+        "tags": [
+          "repeat",
+          "family",
+          "unmet_need"
+        ],
+        "created_at": "2026-05-13T22:02:58",
+        "resolved": false
+      },
+      {
+        "id": "ce_e59380a1dbba",
+        "patient_id": "demo_patient_001",
+        "user_profile_id": 33,
+        "event_type": "anxiety",
+        "severity": "medium",
+        "title": "患者表达害怕或不安心",
+        "description": "患者表达害怕或不安心，需要先安抚情绪并观察诱因。",
+        "source_message": "我有点害怕。",
+        "source_turn": "chat_log:909",
+        "assistant_reply": "我在这里陪你。你现在先坐一会儿，我可以帮你联系小雨。",
+        "suggested_action": "建议家属进行语音安抚，并查看是否有环境、疼痛或等待家人等诱因。",
+        "tags": [
+          "emotion",
+          "reassurance",
+          "trigger_check"
+        ],
+        "created_at": "2026-05-13T22:02:58",
+        "resolved": false
+      },
+      {
+        "id": "ce_ce39bce66371",
+        "patient_id": "demo_patient_001",
+        "user_profile_id": 33,
+        "event_type": "reminiscence_need",
+        "severity": "low",
+        "title": "患者需要人物识别支持",
+        "description": "患者对眼前人物身份不确定，适合由家属补充照片、称呼或简单关系提示。",
+        "source_message": "这个人是谁？",
+        "source_turn": "chat_log:911",
+        "assistant_reply": "我这里不确定眼前这个人是谁。我们可以一起看看照片，或请小雨帮你确认一下。",
+        "suggested_action": "建议家属补充熟悉人物照片或简短称呼信息。",
+        "tags": [
+          "person_recognition",
+          "photo",
+          "memory"
+        ],
+        "created_at": "2026-05-13T22:02:58",
+        "resolved": false
+      },
+      {
+        "id": "ce_79490d12e56f",
+        "patient_id": "demo_patient_001",
+        "user_profile_id": 33,
+        "event_type": "medication_uncertainty",
+        "severity": "medium",
+        "title": "患者不确定是否已服药",
+        "description": "患者不确定今日是否服药，需要家属核对药盒、提醒记录或照护记录。",
+        "source_message": "我是不是还没吃药？",
+        "source_turn": "chat_log:905",
+        "assistant_reply": "我帮你一起确认一下今天的用药提醒。如果不确定，我们请小雨一起看一下药盒。",
+        "suggested_action": "建议家属核对今日用药记录、药盒和提醒状态。",
+        "tags": [
+          "medication",
+          "reminder_check",
+          "family_confirm"
+        ],
+        "created_at": "2026-05-13T22:02:58",
+        "resolved": false
+      },
+      {
+        "id": "ce_548e89b84db8",
+        "patient_id": "demo_patient_001",
+        "user_profile_id": 33,
+        "event_type": "suspicion_or_delusion",
+        "severity": "medium",
+        "title": "患者怀疑物品被拿走",
+        "description": "患者怀疑物品被拿走，可能伴随焦虑，需要陪同核对而不是直接否定。",
+        "source_message": "是不是有人偷了我的东西？",
+        "source_turn": "chat_log:917",
+        "assistant_reply": "听起来你有点担心。我们先一起看一下常放的位置，也可以请小雨帮忙确认。",
+        "suggested_action": "建议家属先安抚情绪，再陪同核对物品位置，避免直接争辩。",
+        "tags": [
+          "suspicion",
+          "anxiety",
+          "item_check"
+        ],
+        "created_at": "2026-05-13T22:02:58",
+        "resolved": false
+      }
+    ],
+    "suggested_actions": [
+      "建议家属查看是否有未满足需求，并补充一段语音留言或提醒卡片。",
+      "建议家属进行语音安抚，并查看是否有环境、疼痛或等待家人等诱因。",
+      "建议家属补充熟悉人物照片或简短称呼信息。",
+      "建议家属核对今日用药记录、药盒和提醒状态。",
+      "建议家属先安抚情绪，再陪同核对物品位置，避免直接争辩。"
+    ],
+    "event_count": 7,
+    "risk_events_count": 6,
+    "reminder_events_count": 1
+  },
+  "turns": [
+    {
+      "turn_id": "turn_01",
+      "turn": 1,
+      "patient_input": "小雨什么时候回来？",
+      "user_message": "小雨什么时候回来？",
+      "assistant_reply": "小雨晚上会打电话。我们先看着这个提醒，也可以请她留一段语音给你。",
+      "detected_scenario": "repeated_question",
+      "detected_state": "clarification",
+      "strategy": "clarification_repair",
+      "requested_provider": "mock",
+      "provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "response_length": 32,
+      "caregiver_event_created": false,
+      "reminder_event_created": false,
+      "risk_level": "low",
+      "quality_score": 10,
+      "score_reasons": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "quality_notes": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "restricted_words_hit": [],
+      "caregiver_events_generated": 0,
+      "caregiver_events": [],
+      "diagnosis_tags": [
+        "provider_ok",
+        "guard_not_triggered",
+        "memory_context_used",
+        "profile_memory_used",
+        "session_memory_used",
+        "long_term_memory_used",
+        "repeated_question",
+        "clarification",
+        "reminder_related"
+      ]
+    },
+    {
+      "turn_id": "turn_02",
+      "turn": 2,
+      "patient_input": "小雨什么时候回来？",
+      "user_message": "小雨什么时候回来？",
+      "assistant_reply": "小雨晚上会打电话。我们先看着这个提醒，也可以请她留一段语音给你。",
+      "detected_scenario": "repeated_question",
+      "detected_state": "clarification",
+      "strategy": "clarification_repair",
+      "requested_provider": "mock",
+      "provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "response_length": 32,
+      "caregiver_event_created": true,
+      "reminder_event_created": false,
+      "risk_level": "medium",
+      "quality_score": 10,
+      "score_reasons": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "quality_notes": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "restricted_words_hit": [],
+      "caregiver_events_generated": 1,
+      "caregiver_events": [
+        {
+          "id": "ce_ffbb08cea2c8",
+          "patient_id": "demo_patient_001",
+          "user_profile_id": 33,
+          "event_type": "repeated_question",
+          "severity": "medium",
+          "title": "重复询问家人回家时间",
+          "description": "患者连续询问女儿小雨回家时间，可能存在等待焦虑或需要明确提醒。",
+          "source_message": "小雨什么时候回来？",
+          "source_turn": "chat_log:903",
+          "assistant_reply": "小雨晚上会打电话。我们先看着这个提醒，也可以请她留一段语音给你。",
+          "suggested_action": "建议家属查看是否有未满足需求，并补充一段语音留言或提醒卡片。",
+          "tags": [
+            "repeat",
+            "family",
+            "unmet_need"
+          ],
+          "created_at": "2026-05-13T22:02:58",
+          "resolved": false
+        }
+      ],
+      "diagnosis_tags": [
+        "provider_ok",
+        "guard_not_triggered",
+        "memory_context_used",
+        "profile_memory_used",
+        "session_memory_used",
+        "long_term_memory_used",
+        "repeated_question",
+        "clarification",
+        "reminder_related"
+      ]
+    },
+    {
+      "turn_id": "turn_03",
+      "turn": 3,
+      "patient_input": "我是不是还没吃药？",
+      "user_message": "我是不是还没吃药？",
+      "assistant_reply": "我帮你一起确认一下今天的用药提醒。如果不确定，我们请小雨一起看一下药盒。",
+      "detected_scenario": "medication_confusion",
+      "detected_state": "emotional",
+      "strategy": "complaint_repair",
+      "requested_provider": "mock",
+      "provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "response_length": 36,
+      "caregiver_event_created": true,
+      "reminder_event_created": true,
+      "risk_level": "medium",
+      "quality_score": 10,
+      "score_reasons": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "quality_notes": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "restricted_words_hit": [],
+      "caregiver_events_generated": 1,
+      "caregiver_events": [
+        {
+          "id": "ce_79490d12e56f",
+          "patient_id": "demo_patient_001",
+          "user_profile_id": 33,
+          "event_type": "medication_uncertainty",
+          "severity": "medium",
+          "title": "患者不确定是否已服药",
+          "description": "患者不确定今日是否服药，需要家属核对药盒、提醒记录或照护记录。",
+          "source_message": "我是不是还没吃药？",
+          "source_turn": "chat_log:905",
+          "assistant_reply": "我帮你一起确认一下今天的用药提醒。如果不确定，我们请小雨一起看一下药盒。",
+          "suggested_action": "建议家属核对今日用药记录、药盒和提醒状态。",
+          "tags": [
+            "medication",
+            "reminder_check",
+            "family_confirm"
+          ],
+          "created_at": "2026-05-13T22:02:58",
+          "resolved": false
+        }
+      ],
+      "diagnosis_tags": [
+        "provider_ok",
+        "guard_not_triggered",
+        "memory_context_used",
+        "profile_memory_used",
+        "session_memory_used",
+        "long_term_memory_used",
+        "medication_confusion",
+        "medication_related"
+      ]
+    },
+    {
+      "turn_id": "turn_04",
+      "turn": 4,
+      "patient_input": "这里是哪里？我要回家。",
+      "user_message": "这里是哪里？我要回家。",
+      "assistant_reply": "我们先看一下现在在哪里。你先待在安全的地方，我可以帮你联系小雨确认。",
+      "detected_scenario": "going_home",
+      "detected_state": "topic_followup",
+      "strategy": "normal_chat",
+      "requested_provider": "mock",
+      "provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "response_length": 34,
+      "caregiver_event_created": true,
+      "reminder_event_created": false,
+      "risk_level": "high",
+      "quality_score": 10,
+      "score_reasons": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "quality_notes": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "restricted_words_hit": [],
+      "caregiver_events_generated": 1,
+      "caregiver_events": [
+        {
+          "id": "ce_1730c2cdbd03",
+          "patient_id": "demo_patient_001",
+          "user_profile_id": 33,
+          "event_type": "disorientation",
+          "severity": "high",
+          "title": "患者出现位置困惑或想回家表达",
+          "description": "患者表达想回家或不确定当前位置，需要优先确认环境安全和当前位置。",
+          "source_message": "这里是哪里？我要回家。",
+          "source_turn": "chat_log:907",
+          "assistant_reply": "我们先看一下现在在哪里。你先待在安全的地方，我可以帮你联系小雨确认。",
+          "suggested_action": "建议家属确认患者当前位置并进行安抚。",
+          "tags": [
+            "orientation",
+            "going_home",
+            "location"
+          ],
+          "created_at": "2026-05-13T22:02:58",
+          "resolved": false
+        }
+      ],
+      "diagnosis_tags": [
+        "provider_ok",
+        "guard_not_triggered",
+        "memory_context_used",
+        "profile_memory_used",
+        "session_memory_used",
+        "long_term_memory_used",
+        "going_home",
+        "safety_risk",
+        "wandering_risk"
+      ]
+    },
+    {
+      "turn_id": "turn_05",
+      "turn": 5,
+      "patient_input": "我有点害怕。",
+      "user_message": "我有点害怕。",
+      "assistant_reply": "我在这里陪你。你现在先坐一会儿，我可以帮你联系小雨。",
+      "detected_scenario": "fear_anxiety",
+      "detected_state": "topic_followup",
+      "strategy": "normal_chat",
+      "requested_provider": "mock",
+      "provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "response_length": 26,
+      "caregiver_event_created": true,
+      "reminder_event_created": false,
+      "risk_level": "medium",
+      "quality_score": 10,
+      "score_reasons": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "quality_notes": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "restricted_words_hit": [],
+      "caregiver_events_generated": 1,
+      "caregiver_events": [
+        {
+          "id": "ce_e59380a1dbba",
+          "patient_id": "demo_patient_001",
+          "user_profile_id": 33,
+          "event_type": "anxiety",
+          "severity": "medium",
+          "title": "患者表达害怕或不安心",
+          "description": "患者表达害怕或不安心，需要先安抚情绪并观察诱因。",
+          "source_message": "我有点害怕。",
+          "source_turn": "chat_log:909",
+          "assistant_reply": "我在这里陪你。你现在先坐一会儿，我可以帮你联系小雨。",
+          "suggested_action": "建议家属进行语音安抚，并查看是否有环境、疼痛或等待家人等诱因。",
+          "tags": [
+            "emotion",
+            "reassurance",
+            "trigger_check"
+          ],
+          "created_at": "2026-05-13T22:02:58",
+          "resolved": false
+        }
+      ],
+      "diagnosis_tags": [
+        "provider_ok",
+        "guard_not_triggered",
+        "memory_context_used",
+        "profile_memory_used",
+        "session_memory_used",
+        "long_term_memory_used",
+        "fear_anxiety"
+      ]
+    },
+    {
+      "turn_id": "turn_06",
+      "turn": 6,
+      "patient_input": "这个人是谁？",
+      "user_message": "这个人是谁？",
+      "assistant_reply": "我这里不确定眼前这个人是谁。我们可以一起看看照片，或请小雨帮你确认一下。",
+      "detected_scenario": "person_recognition",
+      "detected_state": "topic_followup",
+      "strategy": "normal_chat",
+      "requested_provider": "mock",
+      "provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "response_length": 36,
+      "caregiver_event_created": true,
+      "reminder_event_created": false,
+      "risk_level": "low",
+      "quality_score": 10,
+      "score_reasons": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "quality_notes": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "restricted_words_hit": [],
+      "caregiver_events_generated": 1,
+      "caregiver_events": [
+        {
+          "id": "ce_ce39bce66371",
+          "patient_id": "demo_patient_001",
+          "user_profile_id": 33,
+          "event_type": "reminiscence_need",
+          "severity": "low",
+          "title": "患者需要人物识别支持",
+          "description": "患者对眼前人物身份不确定，适合由家属补充照片、称呼或简单关系提示。",
+          "source_message": "这个人是谁？",
+          "source_turn": "chat_log:911",
+          "assistant_reply": "我这里不确定眼前这个人是谁。我们可以一起看看照片，或请小雨帮你确认一下。",
+          "suggested_action": "建议家属补充熟悉人物照片或简短称呼信息。",
+          "tags": [
+            "person_recognition",
+            "photo",
+            "memory"
+          ],
+          "created_at": "2026-05-13T22:02:58",
+          "resolved": false
+        }
+      ],
+      "diagnosis_tags": [
+        "provider_ok",
+        "guard_not_triggered",
+        "memory_context_used",
+        "profile_memory_used",
+        "session_memory_used",
+        "long_term_memory_used",
+        "person_recognition"
+      ]
+    },
+    {
+      "turn_id": "turn_07",
+      "turn": 7,
+      "patient_input": "现在晚上了，我想出去走走。",
+      "user_message": "现在晚上了，我想出去走走。",
+      "assistant_reply": "现在夜里先不要一个人出去。我们等小雨或家人陪着，再一起确认安全。",
+      "detected_scenario": "wandering_risk",
+      "detected_state": "topic_followup",
+      "strategy": "normal_chat",
+      "requested_provider": "mock",
+      "provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "response_length": 32,
+      "caregiver_event_created": true,
+      "reminder_event_created": false,
+      "risk_level": "high",
+      "quality_score": 10,
+      "score_reasons": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "quality_notes": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "restricted_words_hit": [],
+      "caregiver_events_generated": 1,
+      "caregiver_events": [
+        {
+          "id": "ce_36e672275b2e",
+          "patient_id": "demo_patient_001",
+          "user_profile_id": 33,
+          "event_type": "wandering_intent",
+          "severity": "high",
+          "title": "患者表达外出意图",
+          "description": "患者表达外出意图，需关注是否夜间、是否独自外出以及当前位置。",
+          "source_message": "现在晚上了，我想出去走走。",
+          "source_turn": "chat_log:913",
+          "assistant_reply": "现在夜里先不要一个人出去。我们等小雨或家人陪着，再一起确认安全。",
+          "suggested_action": "建议家属确认患者位置，尽量陪同外出，夜间避免独自出门。",
+          "tags": [
+            "wandering",
+            "location",
+            "safety"
+          ],
+          "created_at": "2026-05-13T22:02:58",
+          "resolved": false
+        }
+      ],
+      "diagnosis_tags": [
+        "provider_ok",
+        "guard_not_triggered",
+        "memory_context_used",
+        "profile_memory_used",
+        "session_memory_used",
+        "long_term_memory_used",
+        "wandering_risk",
+        "safety_risk"
+      ]
+    },
+    {
+      "turn_id": "turn_08",
+      "turn": 8,
+      "patient_input": "我刚刚是不是问过你？",
+      "user_message": "我刚刚是不是问过你？",
+      "assistant_reply": "这件事我陪你再确认一遍。我们可以请家人留个提醒卡片，放在容易看到的地方。",
+      "detected_scenario": "repeated_question",
+      "detected_state": "emotional",
+      "strategy": "complaint_repair",
+      "requested_provider": "mock",
+      "provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "response_length": 36,
+      "caregiver_event_created": false,
+      "reminder_event_created": false,
+      "risk_level": "low",
+      "quality_score": 10,
+      "score_reasons": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "quality_notes": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "restricted_words_hit": [],
+      "caregiver_events_generated": 0,
+      "caregiver_events": [],
+      "diagnosis_tags": [
+        "provider_ok",
+        "guard_not_triggered",
+        "memory_context_used",
+        "profile_memory_used",
+        "session_memory_used",
+        "long_term_memory_used",
+        "repeated_question"
+      ]
+    },
+    {
+      "turn_id": "turn_09",
+      "turn": 9,
+      "patient_input": "是不是有人偷了我的东西？",
+      "user_message": "是不是有人偷了我的东西？",
+      "assistant_reply": "听起来你有点担心。我们先一起看一下常放的位置，也可以请小雨帮忙确认。",
+      "detected_scenario": "suspicion_or_delusion",
+      "detected_state": "emotional",
+      "strategy": "complaint_repair",
+      "requested_provider": "mock",
+      "provider": "mock",
+      "model": "mock",
+      "fallback_used": false,
+      "fallback_reason": "",
+      "response_length": 34,
+      "caregiver_event_created": true,
+      "reminder_event_created": false,
+      "risk_level": "medium",
+      "quality_score": 10,
+      "score_reasons": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "quality_notes": [
+        "+2 短句，不超过 3 句话",
+        "+2 语气温和",
+        "+2 没有责怪或指出重复",
+        "+2 没有医学诊断或系统提示",
+        "+2 结合患者 profile 或当前照护场景"
+      ],
+      "restricted_words_hit": [],
+      "caregiver_events_generated": 1,
+      "caregiver_events": [
+        {
+          "id": "ce_548e89b84db8",
+          "patient_id": "demo_patient_001",
+          "user_profile_id": 33,
+          "event_type": "suspicion_or_delusion",
+          "severity": "medium",
+          "title": "患者怀疑物品被拿走",
+          "description": "患者怀疑物品被拿走，可能伴随焦虑，需要陪同核对而不是直接否定。",
+          "source_message": "是不是有人偷了我的东西？",
+          "source_turn": "chat_log:917",
+          "assistant_reply": "听起来你有点担心。我们先一起看一下常放的位置，也可以请小雨帮忙确认。",
+          "suggested_action": "建议家属先安抚情绪，再陪同核对物品位置，避免直接争辩。",
+          "tags": [
+            "suspicion",
+            "anxiety",
+            "item_check"
+          ],
+          "created_at": "2026-05-13T22:02:58",
+          "resolved": false
+        }
+      ],
+      "diagnosis_tags": [
+        "provider_ok",
+        "guard_not_triggered",
+        "memory_context_used",
+        "profile_memory_used",
+        "session_memory_used",
+        "long_term_memory_used",
+        "suspicion_or_delusion"
+      ]
+    }
+  ],
+  "low_score_turns": [],
+  "scenario_average_scores": {
+    "medication_confusion": 10,
+    "fear_anxiety": 10,
+    "going_home": 10,
+    "wandering_risk": 10,
+    "repeated_question": 10,
+    "person_recognition": 10,
+    "suspicion_or_delusion": 10
+  },
+  "caregiver_events": [
+    {
+      "id": "ce_ffbb08cea2c8",
+      "patient_id": "demo_patient_001",
+      "user_profile_id": 33,
+      "event_type": "repeated_question",
+      "severity": "medium",
+      "title": "重复询问家人回家时间",
+      "description": "患者连续询问女儿小雨回家时间，可能存在等待焦虑或需要明确提醒。",
+      "source_message": "小雨什么时候回来？",
+      "source_turn": "chat_log:903",
+      "assistant_reply": "小雨晚上会打电话。我们先看着这个提醒，也可以请她留一段语音给你。",
+      "suggested_action": "建议家属查看是否有未满足需求，并补充一段语音留言或提醒卡片。",
+      "tags": [
+        "repeat",
+        "family",
+        "unmet_need"
+      ],
+      "created_at": "2026-05-13T22:02:58",
+      "resolved": false
+    },
+    {
+      "id": "ce_e59380a1dbba",
+      "patient_id": "demo_patient_001",
+      "user_profile_id": 33,
+      "event_type": "anxiety",
+      "severity": "medium",
+      "title": "患者表达害怕或不安心",
+      "description": "患者表达害怕或不安心，需要先安抚情绪并观察诱因。",
+      "source_message": "我有点害怕。",
+      "source_turn": "chat_log:909",
+      "assistant_reply": "我在这里陪你。你现在先坐一会儿，我可以帮你联系小雨。",
+      "suggested_action": "建议家属进行语音安抚，并查看是否有环境、疼痛或等待家人等诱因。",
+      "tags": [
+        "emotion",
+        "reassurance",
+        "trigger_check"
+      ],
+      "created_at": "2026-05-13T22:02:58",
+      "resolved": false
+    },
+    {
+      "id": "ce_ce39bce66371",
+      "patient_id": "demo_patient_001",
+      "user_profile_id": 33,
+      "event_type": "reminiscence_need",
+      "severity": "low",
+      "title": "患者需要人物识别支持",
+      "description": "患者对眼前人物身份不确定，适合由家属补充照片、称呼或简单关系提示。",
+      "source_message": "这个人是谁？",
+      "source_turn": "chat_log:911",
+      "assistant_reply": "我这里不确定眼前这个人是谁。我们可以一起看看照片，或请小雨帮你确认一下。",
+      "suggested_action": "建议家属补充熟悉人物照片或简短称呼信息。",
+      "tags": [
+        "person_recognition",
+        "photo",
+        "memory"
+      ],
+      "created_at": "2026-05-13T22:02:58",
+      "resolved": false
+    },
+    {
+      "id": "ce_79490d12e56f",
+      "patient_id": "demo_patient_001",
+      "user_profile_id": 33,
+      "event_type": "medication_uncertainty",
+      "severity": "medium",
+      "title": "患者不确定是否已服药",
+      "description": "患者不确定今日是否服药，需要家属核对药盒、提醒记录或照护记录。",
+      "source_message": "我是不是还没吃药？",
+      "source_turn": "chat_log:905",
+      "assistant_reply": "我帮你一起确认一下今天的用药提醒。如果不确定，我们请小雨一起看一下药盒。",
+      "suggested_action": "建议家属核对今日用药记录、药盒和提醒状态。",
+      "tags": [
+        "medication",
+        "reminder_check",
+        "family_confirm"
+      ],
+      "created_at": "2026-05-13T22:02:58",
+      "resolved": false
+    },
+    {
+      "id": "ce_548e89b84db8",
+      "patient_id": "demo_patient_001",
+      "user_profile_id": 33,
+      "event_type": "suspicion_or_delusion",
+      "severity": "medium",
+      "title": "患者怀疑物品被拿走",
+      "description": "患者怀疑物品被拿走，可能伴随焦虑，需要陪同核对而不是直接否定。",
+      "source_message": "是不是有人偷了我的东西？",
+      "source_turn": "chat_log:917",
+      "assistant_reply": "听起来你有点担心。我们先一起看一下常放的位置，也可以请小雨帮忙确认。",
+      "suggested_action": "建议家属先安抚情绪，再陪同核对物品位置，避免直接争辩。",
+      "tags": [
+        "suspicion",
+        "anxiety",
+        "item_check"
+      ],
+      "created_at": "2026-05-13T22:02:58",
+      "resolved": false
+    },
+    {
+      "id": "ce_36e672275b2e",
+      "patient_id": "demo_patient_001",
+      "user_profile_id": 33,
+      "event_type": "wandering_intent",
+      "severity": "high",
+      "title": "患者表达外出意图",
+      "description": "患者表达外出意图，需关注是否夜间、是否独自外出以及当前位置。",
+      "source_message": "现在晚上了，我想出去走走。",
+      "source_turn": "chat_log:913",
+      "assistant_reply": "现在夜里先不要一个人出去。我们等小雨或家人陪着，再一起确认安全。",
+      "suggested_action": "建议家属确认患者位置，尽量陪同外出，夜间避免独自出门。",
+      "tags": [
+        "wandering",
+        "location",
+        "safety"
+      ],
+      "created_at": "2026-05-13T22:02:58",
+      "resolved": false
+    },
+    {
+      "id": "ce_1730c2cdbd03",
+      "patient_id": "demo_patient_001",
+      "user_profile_id": 33,
+      "event_type": "disorientation",
+      "severity": "high",
+      "title": "患者出现位置困惑或想回家表达",
+      "description": "患者表达想回家或不确定当前位置，需要优先确认环境安全和当前位置。",
+      "source_message": "这里是哪里？我要回家。",
+      "source_turn": "chat_log:907",
+      "assistant_reply": "我们先看一下现在在哪里。你先待在安全的地方，我可以帮你联系小雨确认。",
+      "suggested_action": "建议家属确认患者当前位置并进行安抚。",
+      "tags": [
+        "orientation",
+        "going_home",
+        "location"
+      ],
+      "created_at": "2026-05-13T22:02:58",
+      "resolved": false
+    }
+  ],
+  "recommendations": [
+    "本次构造患者链路基本闭合，可继续加入真实设备位置和家属确认状态。"
+  ]
+}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header">
+    <div>
+        <p class="section-kicker">Debug Dashboard</p>
+        <h1>项目测试与模型状态面板</h1>
+        <p class="subtitle">这里集中显示当前 provider、最近一次真实测试、最近一次聊天诊断和家属端事件。仅用于本地开发调试，不显示 API key。</p>
+    </div>
+</section>
+
+<section class="debug-dashboard-grid">
+    <article class="debug-card debug-card-wide">
+        <div class="caregiver-insight-head">
+            <div>
+                <p class="card-kicker">LLM Provider</p>
+                <h2>当前模型配置</h2>
+            </div>
+            <span id="debug-provider-availability" class="status-pill">加载中</span>
+        </div>
+        <div id="debug-llm-status-grid" class="debug-kv-grid"></div>
+    </article>
+
+    <article class="debug-card">
+        <p class="card-kicker">DeepSeek Demo Test</p>
+        <h2>最近一次真实测试结果</h2>
+        <div id="debug-deepseek-test" class="debug-metric-list"></div>
+    </article>
+
+    <article class="debug-card">
+        <p class="card-kicker">Last Chat</p>
+        <h2>最近一次聊天实际使用</h2>
+        <div id="debug-last-chat-summary" class="debug-metric-list"></div>
+    </article>
+
+    <article class="debug-card debug-card-wide">
+        <p class="card-kicker">Raw / Final</p>
+        <h2>最近一次回复诊断</h2>
+        <div class="debug-two-column">
+            <div>
+                <strong>Raw LLM Reply</strong>
+                <pre id="debug-last-raw" class="debug-pre">暂无</pre>
+            </div>
+            <div>
+                <strong>Final Assistant Reply</strong>
+                <pre id="debug-last-final" class="debug-pre">暂无</pre>
+            </div>
+        </div>
+    </article>
+
+    <article class="debug-card debug-card-wide">
+        <div class="caregiver-insight-head">
+            <div>
+                <p class="card-kicker">Caregiver Insight</p>
+                <h2>家属端事件概览</h2>
+            </div>
+            <div class="debug-status-pills">
+                <span id="debug-caregiver-risk" class="status-pill">加载中</span>
+                <span id="debug-caregiver-unresolved-count" class="status-pill">未处理 -</span>
+            </div>
+        </div>
+        <p id="debug-caregiver-summary" class="caregiver-insight-summary">正在读取家属端摘要。</p>
+        <div id="debug-caregiver-events" class="caregiver-event-list"></div>
+    </article>
+
+    <article class="debug-card debug-card-wide">
+        <p class="card-kicker">Commands</p>
+        <h2>常用命令</h2>
+        <pre class="debug-pre">python scripts/test_llm_providers.py
+python scripts/test_deepseek_demo_patient.py --provider deepseek
+python scripts/test_deepseek_demo_patient.py --provider mock
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8001</pre>
+    </article>
+</section>
+{% endblock %}

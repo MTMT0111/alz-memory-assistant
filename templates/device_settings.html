@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header">
+    <div>
+        <p class="section-kicker">提醒设置</p>
+        <h1>安排日常提醒与语音设置</h1>
+        <p class="subtitle">这一页用于整理照护侧可操作的提醒项目。当前阶段先保留正式设置结构，后续再逐步接入实际提醒与播报能力。</p>
+    </div>
+</section>
+
+<section class="device-settings-layout caregiver-settings-layout">
+    <article class="dashboard-card caregiver-card device-settings-card caregiver-card-span-two">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">提醒中心</p>
+                <h2>配置可执行的日常照护提醒</h2>
+            </div>
+            <div id="device-settings-status" class="status-pill">正在读取提醒</div>
+        </div>
+
+        <div class="reminder-form-grid">
+            <label class="field">
+                <span>提醒类型</span>
+                <select id="reminder-type">
+                    <option value="medicine">吃药提醒</option>
+                    <option value="water">喝水提醒</option>
+                    <option value="routine">作息提醒</option>
+                    <option value="activity">活动 / 散步提醒</option>
+                    <option value="later">稍后提醒一次</option>
+                </select>
+            </label>
+            <label class="field">
+                <span>提醒标题</span>
+                <input id="reminder-title" type="text" placeholder="例如：晚饭后吃药">
+            </label>
+            <label class="field">
+                <span>提醒时间</span>
+                <input id="reminder-time" type="time">
+            </label>
+            <label class="field">
+                <span>重复规则</span>
+                <select id="reminder-repeat">
+                    <option value="daily">每天</option>
+                    <option value="once">仅一次</option>
+                    <option value="weekdays">工作日</option>
+                    <option value="weekly">每周</option>
+                </select>
+            </label>
+            <label class="field">
+                <span>设置人</span>
+                <input id="reminder-created-by" type="text" placeholder="例如：女儿、儿子、护工">
+            </label>
+            <div class="reminder-form-actions">
+                <button id="save-reminder-button" type="button">添加提醒</button>
+            </div>
+        </div>
+
+        <div id="reminder-list" class="care-record-list"></div>
+    </article>
+
+    <article class="dashboard-card caregiver-card device-settings-card">
+        <p class="card-kicker">自动播报</p>
+        <h2>语音播报开关</h2>
+        <div class="device-toggle-list">
+            <label class="device-toggle-row">
+                <div>
+                    <strong>自动播报回复</strong>
+                    <span>用于未来设备化语音陪伴。当前只做本地设置保留。</span>
+                </div>
+                <button type="button" id="autoplay-toggle" class="toggle-chip" aria-pressed="false">关闭</button>
+            </label>
+        </div>
+        <p id="reminder-enabled-list" class="summary-note-text">当前还没有开启任何提醒项目。</p>
+    </article>
+
+    <article class="dashboard-card caregiver-card device-settings-card">
+        <p class="card-kicker">语音相关</p>
+        <h2>播报长度与节奏</h2>
+        <div class="settings-form-stack">
+            <label class="field">
+                <span>播报长度</span>
+                <select id="speech-length-select">
+                    <option value="short">简短</option>
+                    <option value="standard">标准</option>
+                    <option value="long">完整</option>
+                </select>
+            </label>
+            <label class="field">
+                <span>播报节奏</span>
+                <select id="speech-rhythm-select">
+                    <option value="gentle">慢一些</option>
+                    <option value="steady">标准</option>
+                    <option value="calm">更从容</option>
+                </select>
+            </label>
+        </div>
+        <p id="voice-settings-summary" class="summary-note-text">语音朗读：当前保留浏览器 speechSynthesis / 现有语音 fallback；MiniMax TTS 待接入。</p>
+    </article>
+
+    <article class="dashboard-card caregiver-card device-settings-card caregiver-card-span-two">
+        <p class="card-kicker">回忆陪伴入口</p>
+        <h2>后续可接入的熟悉素材</h2>
+        <div class="care-placeholder-grid">
+            <div class="care-placeholder-item">
+                <strong>家人照片</strong>
+                <span>预留照片和说明入口，后续可用于熟悉人物提示。</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>语音留言</strong>
+                <span>预留家属录音入口，后续可用于短句安抚和陪伴。</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>熟悉音乐</strong>
+                <span>预留音乐清单，后续可接入舒缓播放。</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>旧地点 / 旧事件</strong>
+                <span>预留熟悉地点和旧经历提示，作为回忆陪伴素材。</span>
+            </div>
+        </div>
+    </article>
+</section>
+{% endblock %}

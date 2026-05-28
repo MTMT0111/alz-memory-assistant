@@ -1,0 +1,17 @@
+{
+  "name": "Alzheimer Family Care App",
+  "short_name": "Alz Care",
+  "description": "A mobile-first LLM-assisted companion and caregiving support app prototype for Alzheimer's families.",
+  "start_url": "/login",
+  "display": "standalone",
+  "background_color": "#f7f7f2",
+  "theme_color": "#f7f7f2",
+  "icons": [
+    {
+      "src": "/static/app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

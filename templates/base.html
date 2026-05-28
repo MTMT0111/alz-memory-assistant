@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#f7f7f2">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Alz Care App">
+    <title>{{ page_title }}</title>
+    <link rel="manifest" href="/static/manifest.webmanifest">
+    <link rel="icon" href="/static/app-icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/static/app-icon.svg">
+    <link rel="stylesheet" href="/static/style.css?v=page-hub-20260518">
+</head>
+<body
+    data-mode="alzheimer"
+    data-page="{{ active_page }}"
+    data-role="{{ app_role }}"
+    class="app-body {% if active_page == 'login' %}app-body-login{% endif %}"
+>
+    <div class="mobile-app-stage">
+        <div class="mobile-app-frame role-{{ app_role }} page-{{ active_page }}">
+            {% if active_page not in ['conversation', 'login'] %}
+            <header class="mobile-shell-header" aria-label="应用状态栏">
+                <div class="mobile-shell-brand">
+                    <span class="mobile-shell-eyebrow">Alzheimer Family App</span>
+                    <strong>{{ shell_meta.title }}</strong>
+                    <span>{{ shell_meta.subtitle }}</span>
+                </div>
+                <div class="mobile-shell-status">
+                    <span class="mode-pill">{{ shell_meta.role_label }}</span>
+                    <span class="status-chip">{{ shell_status.connectivity }}</span>
+                    <span class="status-chip">{{ shell_status.voice }}</span>
+                    <span class="status-chip">{{ shell_status.safety }}</span>
+                </div>
+            </header>
+            {% endif %}
+
+            <main class="page-container {% if active_page == 'conversation' %}page-container-conversation{% endif %} {% if active_page == 'login' %}page-container-login{% endif %} {% if active_page == 'app_home' %}page-container-app-home{% endif %}">
+                {% block page_content %}{% endblock %}
+            </main>
+
+            {% if active_page in ['app_home'] and app_role == 'patient' %}
+            <nav class="mobile-tabbar patient-tabbar" aria-label="Patient navigation">
+                <a href="/app?role=patient&user={{ mock_user }}" class="mobile-tab {% if active_page == 'app_home' %}active{% endif %}">
+                    <span>Home</span>
+                </a>
+                <a href="/conversation" class="mobile-tab {% if active_page == 'conversation' %}active{% endif %}">
+                    <span>Chat</span>
+                </a>
+                <a href="/app?role=patient&user={{ mock_user }}#today" class="mobile-tab">
+                    <span>Today</span>
+                </a>
+                <a href="/app?role=patient&user={{ mock_user }}#status" class="mobile-tab">
+                    <span>Safe</span>
+                </a>
+                <a href="/login?user={{ mock_user }}" class="mobile-tab">
+                    <span>Mode</span>
+                </a>
+            </nav>
+            {% endif %}
+
+            {% if active_page in ['dashboard', 'profile', 'notes', 'analysis', 'device', 'safety', 'materials', 'chat_history', 'reminiscence', 'llm_eval', 'debug_dashboard', 'test_results', 'app_home', 'demo_flow'] and app_role == 'caregiver' %}
+            <nav class="mobile-tabbar caregiver-tabbar" aria-label="Caregiver navigation">
+                <a href="/app?role=caregiver&user={{ mock_user }}" class="mobile-tab {% if active_page == 'app_home' %}active{% endif %}">
+                    <span>Home</span>
+                </a>
+                <a href="/conversation" class="mobile-tab {% if active_page == 'conversation' %}active{% endif %}">
+                    <span>Chat</span>
+                </a>
+                <a href="/care-portal" class="mobile-tab {% if active_page in ['dashboard', 'notes', 'analysis'] %}active{% endif %}">
+                    <span>Care</span>
+                </a>
+                <a href="/location-safety" class="mobile-tab {% if active_page == 'safety' %}active{% endif %}">
+                    <span>Safety</span>
+                </a>
+                <a href="/materials" class="mobile-tab {% if active_page in ['materials', 'reminiscence', 'chat_history'] %}active{% endif %}">
+                    <span>Materials</span>
+                </a>
+                <a href="/device-settings" class="mobile-tab {% if active_page in ['device', 'profile'] %}active{% endif %}">
+                    <span>Settings</span>
+                </a>
+            </nav>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <script>
+        window.APP_BOOTSTRAP = {
+            profile: {{ profile | tojson }},
+            recentLogs: {{ recent_logs | tojson }},
+            memoryDigest: {{ memory_digest | tojson }},
+            supportMeta: {{ support_meta | tojson }},
+            reminders: {{ reminders | tojson }},
+            eventLogs: {{ event_logs | tojson }},
+            caregiverLinks: {{ caregiver_links | tojson }},
+            careDigest: {{ care_digest | tojson }},
+            caregiverPatientId: {{ caregiver_patient_id | tojson }},
+            caregiverEvents: {{ caregiver_events | tojson }},
+            caregiverInsight: {{ caregiver_insight | tojson }},
+            dailyCareSummary: {{ daily_care_summary | tojson }},
+            familiarMaterials: {{ familiar_materials | tojson }},
+            familiarMaterialStatus: {{ familiar_material_status | tojson }},
+            memoryCandidates: {{ memory_candidates | tojson }},
+            activePage: {{ active_page | tojson }},
+            appRole: {{ app_role | tojson }},
+            mockUser: {{ mock_user | tojson }},
+            shellStatus: {{ shell_status | tojson }}
+            ,
+            debugMode: {{ debug_mode | tojson }}
+        };
+    </script>
+    {% if active_page not in ["login", "app_home"] %}
+    <script src="/static/script.js"></script>
+    {% endif %}
+    {% if active_page == "app_home" %}
+    <script src="/static/app_shell.js"></script>
+    {% endif %}
+    {% if active_page == "conversation" %}
+    <script src="/static/voice.js"></script>
+    {% endif %}
+    {% if active_page == "llm_eval" %}
+    <script src="/static/llm_eval.js"></script>
+    {% endif %}
+</body>
+</html>

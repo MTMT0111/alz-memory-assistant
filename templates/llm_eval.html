@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header">
+    <div>
+        <p class="section-kicker">LLM Response Evaluation Lab</p>
+        <h1>响应评测实验室</h1>
+        <p class="subtitle">用于开发者快速测试真实或 Mock LLM 在阿尔兹海默症家庭陪伴与照护场景中的输出质量，重点观察温和度、低刺激表达、安全性和家属辅助价值。</p>
+    </div>
+</section>
+
+<section class="llm-eval-grid">
+    <section class="dashboard-card caregiver-card llm-eval-card">
+        <p class="card-kicker">测试输入</p>
+        <h2>场景、限制词与模拟档案</h2>
+
+        <div class="llm-eval-form-stack">
+            <label class="form-field">
+                <span>Provider</span>
+                <select id="llm-eval-provider-select">
+                    <option value="deepseek" selected>deepseek · DeepSeek V4 Flash</option>
+                    <option value="minimax">minimax · MiniMax</option>
+                    <option value="mock">mock · fallback/debug</option>
+                </select>
+            </label>
+
+            <label class="form-field">
+                <span>测试场景</span>
+                <select id="llm-eval-scenario-select"></select>
+            </label>
+
+            <div id="llm-eval-scenario-summary" class="soft-list-row llm-eval-summary-box">
+                <strong>场景说明会显示在这里。</strong>
+                <span>可以直接运行预设场景，或者在下面输入自定义提问。</span>
+            </div>
+
+            <label class="form-field">
+                <span>限制词</span>
+                <textarea id="llm-eval-restrictions" rows="8" placeholder="每行一个限制词"></textarea>
+            </label>
+
+            <label class="form-field">
+                <span>当前提问者</span>
+                <select id="llm-eval-speaker">
+                    <option value="patient">患者</option>
+                    <option value="caregiver">家属</option>
+                </select>
+            </label>
+
+            <label class="form-field">
+                <span>自定义患者/家属问题</span>
+                <textarea id="llm-eval-custom-message" rows="4" placeholder="留空则运行当前选中的预设场景；填写后会走自定义测试。"></textarea>
+            </label>
+
+            <div class="llm-eval-profile-grid">
+                <label class="form-field">
+                    <span>称呼</span>
+                    <input id="llm-eval-profile-name" type="text" placeholder="例如：林阿姨">
+                </label>
+                <label class="form-field">
+                    <span>年龄</span>
+                    <input id="llm-eval-profile-age" type="number" min="0" placeholder="78">
+                </label>
+                <label class="form-field">
+                    <span>家乡</span>
+                    <input id="llm-eval-profile-hometown" type="text" placeholder="例如：苏州">
+                </label>
+                <label class="form-field llm-eval-profile-span-two">
+                    <span>重要家人</span>
+                    <textarea id="llm-eval-profile-family" rows="3" placeholder="例如：女儿晓梅晚上会来看她。"></textarea>
+                </label>
+                <label class="form-field llm-eval-profile-span-two">
+                    <span>熟悉经历</span>
+                    <textarea id="llm-eval-profile-life-events" rows="3" placeholder="例如：以前在百货公司上班。"></textarea>
+                </label>
+                <label class="form-field llm-eval-profile-span-two">
+                    <span>喜好</span>
+                    <textarea id="llm-eval-profile-preferences" rows="3" placeholder="例如：喜欢评弹和慢慢聊天。"></textarea>
+                </label>
+                <label class="form-field llm-eval-profile-span-two">
+                    <span>陪伴提醒</span>
+                    <textarea id="llm-eval-profile-notes" rows="3" placeholder="例如：反复提问时先安抚，再帮忙确认。"></textarea>
+                </label>
+            </div>
+
+            <div class="inline-actions">
+                <button id="llm-eval-run-button" type="button">运行测试</button>
+                <span id="llm-eval-status" class="status-pill">准备就绪</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="dashboard-card caregiver-card llm-eval-card">
+        <p class="card-kicker">模型输出</p>
+        <h2>原始回复与自动评测</h2>
+
+        <div class="llm-eval-output-stack">
+            <article class="soft-list-row">
+                <strong>请求摘要</strong>
+                <span id="llm-eval-provider-meta">尚未运行。</span>
+            </article>
+
+            <article class="soft-list-row">
+                <strong>API 原始回复</strong>
+                <p id="llm-eval-raw-reply" class="summary-note-text">运行后会显示 DeepSeek / MiniMax 原始回复。</p>
+            </article>
+
+            <article class="soft-list-row">
+                <strong>安全模板 / 后处理回复</strong>
+                <p id="llm-eval-safe-template-reply" class="summary-note-text">如果 guard 触发，会显示 template fallback 或后处理回复。</p>
+            </article>
+
+            <article class="soft-list-row">
+                <strong>最终给患者的回复</strong>
+                <p id="llm-eval-response-text" class="summary-note-text">运行后会显示最终回复。</p>
+            </article>
+
+            <article class="soft-list-row">
+                <strong>Prompt 预览</strong>
+                <pre id="llm-eval-prompt-preview" class="llm-eval-pre">运行后会显示本次测试的 prompt 摘要。</pre>
+            </article>
+        </div>
+    </section>
+</section>
+
+<section class="llm-eval-results-grid">
+    <section class="dashboard-card caregiver-card">
+        <p class="card-kicker">自动评分</p>
+        <h2>核心维度</h2>
+        <div id="llm-eval-score-grid" class="analysis-metrics-grid llm-eval-score-grid"></div>
+    </section>
+
+    <section class="dashboard-card caregiver-card">
+        <p class="card-kicker">风险提示</p>
+        <h2>需要留意的点</h2>
+        <div id="llm-eval-risks" class="soft-list"></div>
+    </section>
+
+    <section class="dashboard-card caregiver-card">
+        <p class="card-kicker">改进建议</p>
+        <h2>下一轮提示词可优化处</h2>
+        <div id="llm-eval-suggestions" class="soft-list"></div>
+    </section>
+
+    <section class="dashboard-card caregiver-card">
+        <p class="card-kicker">表现亮点</p>
+        <h2>当前回复的可取之处</h2>
+        <div id="llm-eval-strengths" class="soft-list"></div>
+    </section>
+</section>
+{% endblock %}

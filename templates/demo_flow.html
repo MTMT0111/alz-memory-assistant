@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="demo-flow-shell">
+    <header class="demo-flow-header">
+        <div>
+            <p class="section-kicker">Demo Flow</p>
+            <h1>v0.5 演示流程：阿尔兹海默症家庭陪伴与照护辅助系统</h1>
+            <p class="subtitle">本演示只证明三件事：DeepSeek 能稳定完成患者端受控对话；家属端能形成每日照护闭环；个人记忆能通过家属审核进入回忆陪伴。</p>
+        </div>
+        <div class="demo-flow-header-tags">
+            <span class="status-pill success">推荐从 Step 1 开始</span>
+            <span class="status-pill neutral">项目演示总入口</span>
+        </div>
+    </header>
+
+    <section class="demo-flow-proof-card" aria-label="演示主线">
+        <p class="card-kicker">本演示只证明三件事</p>
+        <ol class="demo-flow-proof-list">
+            <li>DeepSeek 能稳定完成患者端受控对话。</li>
+            <li>家属端能形成每日照护闭环。</li>
+            <li>个人记忆能通过家属审核进入回忆陪伴。</li>
+        </ol>
+    </section>
+
+    <section class="demo-flow-status-card">
+        <div class="demo-flow-status-side">
+            <p class="card-kicker">项目状态</p>
+            <h2>三条主线的运行状态</h2>
+            <div class="demo-flow-status-list">
+                <div class="demo-flow-status-item">
+                    <span>项目版本</span>
+                    <strong>{{ demo_flow_status.version }}</strong>
+                </div>
+                <div class="demo-flow-status-item">
+                    <span>当前主模型</span>
+                    <strong>{{ demo_flow_status.provider_label }} · {{ demo_flow_status.model }}</strong>
+                </div>
+                <div class="demo-flow-status-item">
+                    <span>当前患者</span>
+                    <strong>{{ demo_flow_status.patient_name }}</strong>
+                </div>
+                <div class="demo-flow-status-item">
+                    <span>家属端</span>
+                    <strong>{{ demo_flow_status.caregiver_name }}</strong>
+                </div>
+            </div>
+        </div>
+        <div class="demo-flow-status-side">
+            <p class="card-kicker">对照评估</p>
+            <h2>care_system 相比 baseline_direct_llm</h2>
+            {% if demo_flow_status.comparison_available %}
+            <div class="demo-flow-metric-grid">
+                <div class="demo-flow-metric-card">
+                    <span>baseline_direct_llm</span>
+                    <strong>{{ demo_flow_status.baseline_score_text }}</strong>
+                </div>
+                <div class="demo-flow-metric-card">
+                    <span>care_system</span>
+                    <strong>{{ demo_flow_status.care_score_text }}</strong>
+                </div>
+                <div class="demo-flow-metric-card">
+                    <span>提升</span>
+                    <strong>{{ demo_flow_status.improvement_text }}</strong>
+                </div>
+                <div class="demo-flow-metric-card">
+                    <span>结论</span>
+                    <strong>{{ demo_flow_status.verdict }}</strong>
+                </div>
+            </div>
+            {% else %}
+            <div class="demo-flow-report-empty">
+                <strong>对照评估报告未生成</strong>
+                <code>venv/bin/python scripts/evaluate_controlled_llm_comparison.py</code>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="demo-flow-steps-section" aria-labelledby="demo-steps-title">
+        <div class="demo-flow-section-head">
+            <div>
+                <p class="card-kicker">6 步演示流程</p>
+                <h2 id="demo-steps-title">按 6 步讲清三条主线</h2>
+            </div>
+        </div>
+        <div class="demo-flow-step-grid">
+            {% for step in demo_steps %}
+            <article class="demo-flow-step-card">
+                <div class="demo-flow-step-head">
+                    <span class="demo-flow-step-number">Step {{ loop.index }}</span>
+                    <strong>{{ step.title }}</strong>
+                </div>
+                <span class="demo-flow-step-legacy">{{ step.legacy_text }}</span>
+                <ul class="demo-flow-point-list">
+                    {% for point in step.points %}
+                    <li>{{ point }}</li>
+                    {% endfor %}
+                </ul>
+                {% if step.test_sentences %}
+                <div class="demo-flow-sentence-box">
+                    <span>推荐测试句</span>
+                    <ul class="demo-flow-sentence-list">
+                        {% for sentence in step.test_sentences %}
+                        <li>{{ sentence }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                <a class="ghost-button" href="{{ step.href }}">{{ step.button_label }}</a>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="demo-flow-guidance-card">
+        <div class="demo-flow-section-head">
+            <div>
+                <p class="card-kicker">推荐讲解顺序</p>
+                <h2>从患者端到家属端，再到记忆审核</h2>
+            </div>
+        </div>
+        <ol class="demo-flow-guidance-list">
+            {% for point in demo_talking_points %}
+            <li>{{ point }}</li>
+            {% endfor %}
+        </ol>
+    </section>
+
+    <details class="demo-flow-command-card">
+        <summary>本地演示常用命令</summary>
+        <div class="demo-flow-command-list">
+            {% for command in demo_commands %}
+            <code>{{ command }}</code>
+            {% endfor %}
+        </div>
+    </details>
+</section>
+{% endblock %}

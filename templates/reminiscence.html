@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header reminiscence-page-header">
+    <div>
+        <p class="section-kicker">Reminiscence</p>
+        <h1>李奶奶的回忆陪伴</h1>
+        <p class="subtitle">从家人、老歌、旧地点和旧经历中，选择一段温和素材开始陪伴对话。</p>
+    </div>
+    <div class="reminiscence-header-actions">
+        <a class="ghost-button" href="/app_home">返回首页</a>
+        <a class="ghost-button" href="/materials">管理素材</a>
+        <a class="ghost-button" href="/chat-history">查看聊天记录</a>
+        <a class="ghost-button" href="/conversation?debug=1">开始对话</a>
+    </div>
+</section>
+
+<section class="debug-card debug-card-wide reminiscence-hero-card">
+    <div class="reminiscence-hero-grid">
+        <div class="reminiscence-hero-main">
+            <p class="card-kicker">顶部患者与陪伴说明</p>
+            <h2 id="reminiscence-patient-name">{{ profile.name or "李桂兰（李奶奶）" }}</h2>
+            <p id="reminiscence-profile-line">{{ profile.age or 78 }} 岁 · {{ profile.hometown or "温州" }}</p>
+            <p id="reminiscence-caregiver-line">主要家属：陈小雨</p>
+            <p>当前模式：选择已确认素材进入陪伴。</p>
+        </div>
+        <div class="reminiscence-hero-side">
+            <div class="reminiscence-hero-tip">
+                <strong>温和开始</strong>
+                <span>更适合用“我们一起看看”“我陪你慢慢想”，而不是考试式提问。</span>
+            </div>
+            <div class="reminiscence-hero-tip">
+                <strong>素材进入方式</strong>
+                <span>只带入相关摘要，不一次性暴露全部资料。</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="debug-card debug-card-wide reminiscence-filter-card">
+    <div class="reminiscence-filter-head">
+        <div>
+            <p class="card-kicker">回忆素材分类导航</p>
+            <h2>按你想聊的方向开始</h2>
+        </div>
+        <span class="reminiscence-filter-note">点击 chip 即可前端筛选，不会改动素材库本身。</span>
+    </div>
+    <div id="reminiscence-chip-row" class="reminiscence-chip-row">
+        <button type="button" class="status-pill active">全部</button>
+    </div>
+</section>
+
+<section class="debug-card debug-card-wide reminiscence-recommended-card">
+    <div class="reminiscence-section-head">
+        <div>
+            <p class="card-kicker">推荐回忆卡片</p>
+            <h2>推荐从这三种方向开始</h2>
+        </div>
+    </div>
+    <div id="reminiscence-recommended-grid" class="reminiscence-recommended-grid">
+        <article class="reminiscence-start-card">
+            <h3>和小雨有关</h3>
+            <p>正在整理可用素材...</p>
+        </article>
+    </div>
+</section>
+
+<section class="debug-card debug-card-wide reminiscence-library-card">
+    <div class="reminiscence-section-head">
+        <div>
+            <p class="card-kicker">分类素材展示</p>
+            <h2>按陪伴场景浏览</h2>
+        </div>
+        <div id="reminiscence-page-status" class="materials-form-status materials-form-status-hidden" aria-live="polite"></div>
+    </div>
+    <div id="reminiscence-groups" class="reminiscence-display-groups">
+        <div class="log-empty">
+            <strong>正在整理回忆素材。</strong>
+            <span>如果暂时没有素材，可以先到熟悉素材库补充。</span>
+        </div>
+    </div>
+</section>
+
+<section class="debug-card debug-card-wide reminiscence-guidance-card">
+    <div class="reminiscence-section-head">
+        <div>
+            <p class="card-kicker">安全边界说明</p>
+            <h2>回忆陪伴不是记忆测试</h2>
+        </div>
+    </div>
+    <ol class="reminiscence-guidance-list">
+        <li>不要问“你还记得吗？”这种考试式问题。</li>
+        <li>更适合使用“我们一起看看”“我陪你慢慢想”。</li>
+        <li>敏感人物和创伤经历不要主动提起。</li>
+        <li>系统只把相关摘要带入对话，不会一次性暴露全部资料。</li>
+        <li>回忆陪伴用于情绪支持和熟悉感建立，不用于医疗诊断。</li>
+    </ol>
+</section>
+{% endblock %}

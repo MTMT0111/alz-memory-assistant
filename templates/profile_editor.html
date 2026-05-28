@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header">
+    <div>
+        <p class="section-kicker">档案</p>
+        <h1>维护照护档案</h1>
+        <p class="subtitle">这里用于整理患者的基本信息和熟悉线索。写清楚重要的人、过往经历、偏好与陪伴提醒，后续对话会更贴近真实生活。</p>
+    </div>
+</section>
+
+<section class="caregiver-two-column-layout">
+    <section class="profile-panel profile-panel-wide caregiver-card">
+        <div class="section-heading caregiver-section-heading">
+            <div>
+                <p class="section-kicker">人物建档</p>
+                <h2>把关键资料放在一个清楚的位置</h2>
+                <p>这些内容不会直接展示给患者，而是作为陪伴和回忆承接的辅助资料。</p>
+            </div>
+            <span id="profile-status" class="status-pill">档案已同步</span>
+        </div>
+
+        <input id="profile-id" type="hidden" value="{{ profile.id or '' }}">
+
+        <div class="profile-section-list caregiver-archive-list">
+            <section class="profile-section-card caregiver-section-card">
+                <div class="profile-section-header">
+                    <p class="card-kicker">基本信息</p>
+                    <h3>先确认最基础的身份与熟悉地点</h3>
+                </div>
+
+                <div class="profile-grid">
+                    <label class="field">
+                        <span>常用称呼</span>
+                        <input id="name" type="text" placeholder="例如：王奶奶、妈妈、奶奶" value="{{ profile.name }}">
+                    </label>
+
+                    <label class="field">
+                        <span>年龄</span>
+                        <input id="age" type="number" placeholder="例如：78" value="{{ profile.age if profile.age is not none else '' }}">
+                    </label>
+
+                    <label class="field profile-grid-span">
+                        <span>熟悉城市或家乡</span>
+                        <input id="hometown" type="text" placeholder="例如：南京、苏州、老家在绍兴" value="{{ profile.hometown }}">
+                    </label>
+                </div>
+            </section>
+
+            <section class="profile-section-card caregiver-section-card">
+                <div class="profile-section-header">
+                    <p class="card-kicker">重要的人</p>
+                    <h3>记录最容易带出安心感的家人与熟人</h3>
+                </div>
+                <label class="field">
+                    <span>重要家人或陪伴者</span>
+                    <textarea id="family-info" rows="4" placeholder="例如：女儿叫李静，在上海工作；儿子建国住得近，周末常来看望。">{{ profile.family_info }}</textarea>
+                </label>
+            </section>
+
+            <section class="profile-section-card caregiver-section-card">
+                <div class="profile-section-header">
+                    <p class="card-kicker">熟悉经历</p>
+                    <h3>记录容易接上的生活经历、工作或地点</h3>
+                </div>
+                <label class="field">
+                    <span>重要经历</span>
+                    <textarea id="life-events" rows="4" placeholder="例如：年轻时在南京商场工作；做过老师；最熟悉的是家里和过去上班的地方。">{{ profile.life_events }}</textarea>
+                </label>
+            </section>
+
+            <section class="profile-section-card caregiver-section-card">
+                <div class="profile-section-header">
+                    <p class="card-kicker">喜欢的事情</p>
+                    <h3>记录更容易放松和接话的内容</h3>
+                </div>
+                <label class="field">
+                    <span>偏好与兴趣</span>
+                    <textarea id="preferences" rows="4" placeholder="例如：喜欢热汤、面条、评弹、散步，或者愿意聊家人和家乡。">{{ profile.preferences }}</textarea>
+                </label>
+            </section>
+
+            <section class="profile-section-card caregiver-section-card">
+                <div class="profile-section-header">
+                    <p class="card-kicker">陪伴提醒</p>
+                    <h3>记录说话方式、节奏和需要避免的表达</h3>
+                </div>
+                <label class="field">
+                    <span>照护备注</span>
+                    <textarea id="notes" rows="4" placeholder="例如：说话慢一点；不要纠错；更适合短句；可以先从熟悉的人和旧经历说起。">{{ profile.notes }}</textarea>
+                </label>
+            </section>
+        </div>
+
+        <div class="profile-actions">
+            <button id="save-button" type="button">保存档案</button>
+        </div>
+    </section>
+
+    <aside class="dashboard-card caregiver-card caregiver-side-card">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">填写建议</p>
+                <h2>怎样写会更有帮助</h2>
+            </div>
+        </div>
+        <div class="soft-list caregiver-soft-list">
+            <div class="soft-list-row demo-profile-row">
+                <span>当前 Demo</span>
+                <strong>李桂兰（李奶奶），78岁，浙江温州。女儿陈小雨每晚 8 点左右联系，重点关注用药、重复提问、焦虑和外出安全。</strong>
+            </div>
+            <div class="soft-list-row">
+                <span>基本信息</span>
+                <strong>优先写常用称呼、年龄范围和最熟悉的城市或家乡。</strong>
+            </div>
+            <div class="soft-list-row">
+                <span>重要的人</span>
+                <strong>写具体关系和最近联系情况，比只写名字更有用。</strong>
+            </div>
+            <div class="soft-list-row">
+                <span>熟悉经历</span>
+                <strong>尽量写日常生活、工作地点、反复提到的过去经历。</strong>
+            </div>
+            <div class="soft-list-row">
+                <span>陪伴提醒</span>
+                <strong>把需要避免的话术、合适节奏和有效安抚方式写清楚。</strong>
+            </div>
+        </div>
+
+        <div class="caregiver-collab-panel">
+            <p class="card-kicker">家属协同</p>
+            <h2>共享照护成员</h2>
+            <div class="caregiver-link-form">
+                <label class="field">
+                    <span>姓名</span>
+                    <input id="caregiver-name" type="text" placeholder="例如：女儿、儿子、护工">
+                </label>
+                <label class="field">
+                    <span>角色</span>
+                    <input id="caregiver-role" type="text" placeholder="例如：主要照护人">
+                </label>
+                <label class="field">
+                    <span>联系方式</span>
+                    <input id="caregiver-contact" type="text" placeholder="电话或备注">
+                </label>
+                <label class="device-toggle-row caregiver-primary-row">
+                    <div>
+                        <strong>设为主要联系人</strong>
+                        <span>用于后续提醒和异常同步。</span>
+                    </div>
+                    <input id="caregiver-primary" type="checkbox">
+                </label>
+                <button id="save-caregiver-button" type="button">添加成员</button>
+            </div>
+            <div id="caregiver-link-list" class="care-record-list"></div>
+        </div>
+    </aside>
+</section>
+{% endblock %}

@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="materials-library-shell">
+    <header class="materials-library-header">
+        <div>
+            <p class="section-kicker">Familiar Materials</p>
+            <h1>李奶奶熟悉素材库</h1>
+            <p class="subtitle">家属可在这里维护照片、语音留言、熟悉音乐、旧地点、旧事件和敏感记忆，用于患者端回忆陪伴与低刺激对话。</p>
+        </div>
+        <div class="materials-header-actions">
+            <a class="ghost-button" href="/conversation?debug=1">去患者端测试</a>
+            <a class="ghost-button" href="/chat-history">查看记忆候选</a>
+        </div>
+    </header>
+
+    <section class="materials-top-card">
+        <div class="materials-top-profile">
+            <p class="card-kicker">患者与用途</p>
+            <h2>家属录入患者熟悉资料的主页面</h2>
+            <div class="materials-profile-pills">
+                <span><strong>当前患者：</strong>李桂兰（李奶奶）</span>
+                <span><strong>主要家属：</strong>陈小雨</span>
+                <span><strong>用途：</strong>回忆陪伴 / 对话上下文 / 家属审核记忆沉淀</span>
+            </div>
+        </div>
+        <div>
+            <p class="card-kicker">素材统计</p>
+            <div id="materials-overview-grid" class="materials-overview-grid"></div>
+        </div>
+    </section>
+
+    <section class="materials-filter-card">
+        <details class="materials-filter-details" open>
+            <summary>素材筛选与搜索</summary>
+            <div class="materials-filter-row">
+                <label class="field materials-filter-search">
+                    <span>搜索</span>
+                    <input id="materials-filter-search" type="search" placeholder="搜索标题、描述、关联人物">
+                </label>
+                <label class="field">
+                    <span>类型筛选</span>
+                    <select id="materials-filter-type">
+                        <option value="">全部</option>
+                        <option value="family_photo">家人照片</option>
+                        <option value="voice_message">语音留言</option>
+                        <option value="familiar_music">熟悉音乐</option>
+                        <option value="old_place">旧地点</option>
+                        <option value="old_event">旧事件</option>
+                        <option value="daily_object">日常物品</option>
+                        <option value="sensitive_memory">敏感记忆</option>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>敏感筛选</span>
+                    <select id="materials-filter-sensitive">
+                        <option value="">全部</option>
+                        <option value="sensitive">仅敏感</option>
+                        <option value="normal">仅非敏感</option>
+                    </select>
+                </label>
+                <label class="field">
+                    <span>状态筛选</span>
+                    <select id="materials-filter-active">
+                        <option value="">全部</option>
+                        <option value="active">可用于对话</option>
+                        <option value="inactive">不参与对话</option>
+                    </select>
+                </label>
+            </div>
+            <div class="materials-filter-foot">
+                <span id="materials-count" class="status-pill">0 条</span>
+                <span class="summary-note-text">搜索会匹配标题、描述、关联人物、标签和转写内容。</span>
+            </div>
+        </details>
+    </section>
+
+    <section class="materials-workspace">
+        <section class="materials-form-panel">
+            <div class="materials-form-head">
+                <div>
+                    <p class="card-kicker">新增 / 编辑素材</p>
+                    <h2 id="materials-form-title">添加熟悉素材</h2>
+                </div>
+                <span id="material-form-status" class="status-pill neutral">准备就绪</span>
+            </div>
+            <input id="material-id" type="hidden">
+
+            <section class="materials-form-group">
+                <div class="materials-form-group-head">
+                    <h3>基础信息</h3>
+                    <p id="materials-type-helper" class="summary-note-text">先选择素材类型，系统会给出适合当前类型的录入提示。</p>
+                </div>
+                <div class="materials-form-grid">
+                    <label class="field">
+                        <span>素材类型</span>
+                        <select id="material-type">
+                            <option value="family_photo">家人照片</option>
+                            <option value="voice_message">语音留言</option>
+                            <option value="familiar_music">熟悉音乐</option>
+                            <option value="old_place">旧地点</option>
+                            <option value="old_event">旧事件</option>
+                            <option value="daily_object">日常物品</option>
+                            <option value="sensitive_memory">敏感记忆</option>
+                        </select>
+                    </label>
+                    <label class="field">
+                        <span>标题</span>
+                        <input id="material-title" type="text" placeholder="例如：女儿小雨照片">
+                    </label>
+                    <label class="field materials-span-two">
+                        <span>描述</span>
+                        <textarea id="material-description" rows="4" placeholder="这条素材如何用于陪伴或回忆。"></textarea>
+                    </label>
+                    <label class="field">
+                        <span>关联人物</span>
+                        <input id="material-related-person" type="text" placeholder="例如：陈小雨">
+                    </label>
+                    <label class="field">
+                        <span>相关时间</span>
+                        <input id="material-related-time" type="text" placeholder="例如：年轻时、下午、晚上 8 点">
+                    </label>
+                    <label class="field materials-span-two">
+                        <span>标签</span>
+                        <input id="material-tags" type="text" placeholder="例如：小雨, 老歌, 温州, 菜场">
+                    </label>
+                </div>
+            </section>
+
+            <section class="materials-form-group">
+                <div class="materials-form-group-head">
+                    <h3>媒体 / 链接</h3>
+                    <p class="summary-note-text">家人照片可填图片链接，语音留言可填音频链接和转写，熟悉音乐可填播放链接与歌手。</p>
+                </div>
+                <div class="materials-form-grid">
+                    <label class="field materials-span-two">
+                        <span>URL / 文件路径</span>
+                        <input id="material-file-path" type="text" placeholder="图片、音频、音乐或其他素材链接">
+                    </label>
+                    <label class="field">
+                        <span>缩略图</span>
+                        <input id="material-thumbnail-url" type="text" placeholder="家人照片可填写缩略图或 image_url">
+                    </label>
+                    <label class="field">
+                        <span>艺术家</span>
+                        <input id="material-artist" type="text" placeholder="熟悉音乐可填写歌手或艺术家">
+                    </label>
+                    <label class="field materials-span-two">
+                        <span>音频转写</span>
+                        <textarea id="material-transcript-text" rows="3" placeholder="例如：小雨说晚上 8 点会联系妈妈，请妈妈安心休息。"></textarea>
+                    </label>
+                </div>
+            </section>
+
+            <section class="materials-form-group">
+                <div class="materials-form-group-head">
+                    <h3>安全与使用</h3>
+                    <p class="summary-note-text">旧地点、旧事件和敏感记忆建议写清 use_scene、safety_note 和是否进入对话。</p>
+                </div>
+                <div class="materials-form-grid">
+                    <label class="field">
+                        <span>使用场景</span>
+                        <input id="material-use-scene" type="text" placeholder="例如：reminiscence / afternoon_anxiety / sleep">
+                    </label>
+                    <label class="field">
+                        <span>建议使用场景</span>
+                        <input id="material-suggested-use-scene" type="text" placeholder="例如：repeated_question / good_night">
+                    </label>
+                    <label class="field">
+                        <span>敏感等级</span>
+                        <select id="material-sensitivity-level">
+                            <option value="">普通</option>
+                            <option value="low">低</option>
+                            <option value="medium">中</option>
+                            <option value="high">高</option>
+                        </select>
+                    </label>
+                    <label class="device-toggle-row material-sensitive-row">
+                        <input id="material-is-sensitive" type="checkbox">
+                        <span>
+                            <strong>是否敏感</strong>
+                            <small>敏感素材不会主动刺激患者。</small>
+                        </span>
+                    </label>
+                    <label class="device-toggle-row material-sensitive-row materials-span-two">
+                        <input id="material-is-active" type="checkbox" checked>
+                        <span>
+                            <strong>是否可用于对话</strong>
+                            <small>关闭后仍保存在素材库，但不会进入聊天上下文。</small>
+                        </span>
+                    </label>
+                    <label class="field materials-span-two">
+                        <span>安全提示</span>
+                        <textarea id="material-safety-note" rows="3" placeholder="例如：患者问起老伴时先接住情绪，不直接说去世。"></textarea>
+                    </label>
+                </div>
+            </section>
+
+            <div class="inline-actions materials-actions">
+                <button id="material-save-button" type="button">保存素材</button>
+                <button id="material-reset-button" type="button" class="ghost-button">清空</button>
+            </div>
+        </section>
+
+        <section class="materials-list-panel">
+            <div class="materials-list-head">
+                <div>
+                    <p class="card-kicker">素材卡片列表</p>
+                    <h2>患者端可参考的熟悉线索</h2>
+                </div>
+            </div>
+            <div id="materials-list" class="materials-list"></div>
+        </section>
+    </section>
+
+    <section class="materials-guidance-card">
+        <p class="card-kicker">使用说明与安全边界</p>
+        <h2>这些素材如何进入对话？</h2>
+        <ol class="materials-guidance-list">
+            <li>系统只会把相关摘要放入上下文，不会把全部素材一次性塞给 LLM。</li>
+            <li>已确认素材可用于回忆陪伴和低刺激对话。</li>
+            <li>敏感记忆不会主动提起，必须写 safety_note。</li>
+            <li>系统不是医疗工具，不能替代家属或医生判断。</li>
+        </ol>
+    </section>
+</section>
+{% endblock %}
