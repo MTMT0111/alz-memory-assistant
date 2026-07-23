@@ -2,15 +2,16 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#f7f7f2">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <meta name="theme-color" content="#2563a8">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Alz Care App">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="照护助手">
     <title>{{ page_title }}</title>
-    <link rel="manifest" href="/static/manifest.webmanifest">
+    <link rel="manifest" href="/static/manifest.json">
     <link rel="icon" href="/static/app-icon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/static/app-icon.svg">
-    <link rel="stylesheet" href="/static/style.css?v=page-hub-20260518">
+    <link rel="apple-touch-icon" href="/static/icon-192.png">
+    <link rel="stylesheet" href="/static/style.css?v=conversation-cleanup-20260629">
 </head>
 <body
     data-mode="alzheimer"
@@ -60,7 +61,7 @@
             </nav>
             {% endif %}
 
-            {% if active_page in ['dashboard', 'profile', 'notes', 'analysis', 'device', 'safety', 'materials', 'chat_history', 'reminiscence', 'llm_eval', 'debug_dashboard', 'test_results', 'app_home', 'demo_flow'] and app_role == 'caregiver' %}
+            {% if active_page in ['dashboard', 'profile', 'notes', 'analysis', 'care_trend', 'device', 'safety', 'materials', 'photo_timeline', 'chat_history', 'reminiscence', 'llm_eval', 'debug_dashboard', 'test_results', 'app_home', 'demo_flow'] and app_role == 'caregiver' %}
             <nav class="mobile-tabbar caregiver-tabbar" aria-label="Caregiver navigation">
                 <a href="/app?role=caregiver&user={{ mock_user }}" class="mobile-tab {% if active_page == 'app_home' %}active{% endif %}">
                     <span>Home</span>
@@ -68,13 +69,13 @@
                 <a href="/conversation" class="mobile-tab {% if active_page == 'conversation' %}active{% endif %}">
                     <span>Chat</span>
                 </a>
-                <a href="/care-portal" class="mobile-tab {% if active_page in ['dashboard', 'notes', 'analysis'] %}active{% endif %}">
+                <a href="/care-portal" class="mobile-tab {% if active_page in ['dashboard', 'notes', 'analysis', 'care_trend'] %}active{% endif %}">
                     <span>Care</span>
                 </a>
                 <a href="/location-safety" class="mobile-tab {% if active_page == 'safety' %}active{% endif %}">
                     <span>Safety</span>
                 </a>
-                <a href="/materials" class="mobile-tab {% if active_page in ['materials', 'reminiscence', 'chat_history'] %}active{% endif %}">
+                <a href="/materials" class="mobile-tab {% if active_page in ['materials', 'photo_timeline', 'reminiscence', 'chat_history'] %}active{% endif %}">
                     <span>Materials</span>
                 </a>
                 <a href="/device-settings" class="mobile-tab {% if active_page in ['device', 'profile'] %}active{% endif %}">
@@ -103,6 +104,8 @@
             familiarMaterials: {{ familiar_materials | tojson }},
             familiarMaterialStatus: {{ familiar_material_status | tojson }},
             memoryCandidates: {{ memory_candidates | tojson }},
+            selectedPatient: {{ patient | default(none) | tojson }},
+            currentCaregiver: {{ current_caregiver | default(none) | tojson }},
             activePage: {{ active_page | tojson }},
             appRole: {{ app_role | tojson }},
             mockUser: {{ mock_user | tojson }},
@@ -123,5 +126,12 @@
     {% if active_page == "llm_eval" %}
     <script src="/static/llm_eval.js"></script>
     {% endif %}
+    <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/sw.js', { scope: '/' })
+        .then(() => console.log('SW registered'))
+        .catch(e => console.log('SW error:', e));
+    }
+    </script>
 </body>
 </html>

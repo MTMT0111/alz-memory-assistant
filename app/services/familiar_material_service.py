@@ -5,6 +5,7 @@ from __future__ import annotations
 from contextlib import closing
 from dataclasses import dataclass
 from datetime import datetime
+import json
 from typing import Any, Sequence
 
 from app.database import get_connection
@@ -117,6 +118,26 @@ def _clean_text(value: Any) -> str:
     return str(value or "").strip()
 
 
+def _clean_int(value: Any) -> int | None:
+    """把年份等输入转成整数；无法解析时保持为空。"""
+    try:
+        if value is None or str(value).strip() == "":
+            return None
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def photo_decade_from_year(year: int | None) -> str:
+    """根据照片年份计算年代标签，供时间线筛选使用。"""
+    if not year:
+        return ""
+    if year >= 2000:
+        return "2000s+"
+    decade = (int(year) // 10) * 10
+    return f"{decade}s"
+
+
 def _normalize_material_type(value: Any) -> str:
     text = _clean_text(value)
     return text if text in MATERIAL_TYPES else "old_event"
@@ -140,14 +161,29 @@ def _clean_active(value: Any) -> bool:
 
 
 def _split_tags(text: str) -> list[str]:
-    return [
-        tag.strip()
-        for tag in str(text or "").replace("，", ",").split(",")
-        if tag.strip()
-    ]
+    raw = str(text or "").strip()
+    if not raw:
+        return []
+    if raw.startswith("["):
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, list):
+                return [str(tag).strip() for tag in parsed if str(tag).strip()]
+        except Exception:
+            pass
+    return [tag.strip() for tag in raw.replace("，", ",").split(",") if tag.strip()]
 
 
-def _row_by_id(patient_id: int, material_id: int) -> FamiliarMaterial | None:
+def _normalize_tags(value: Any) -> str:
+    """新版标签统一存 JSON 数组；兼容前端传逗号分隔字符串。"""
+    if isinstance(value, list):
+        tags = [str(item).strip() for item in value if str(item).strip()]
+    else:
+        tags = _split_tags(str(value or ""))
+    return json.dumps(tags, ensure_ascii=False)
+
+
+def _row_by_id(patient_id: int | str, material_id: int) -> FamiliarMaterial | None:
     with closing(get_connection()) as connection:
         row = connection.execute(
             "SELECT * FROM familiar_materials WHERE patient_id = ? AND id = ?",
@@ -156,7 +192,7 @@ def _row_by_id(patient_id: int, material_id: int) -> FamiliarMaterial | None:
     return FamiliarMaterial.from_row(row) if row else None
 
 
-def list_materials(patient_id: int, *, limit: int = 100) -> list[FamiliarMaterial]:
+def list_materials(patient_id: int | str, *, limit: int = 100) -> list[FamiliarMaterial]:
     """Return familiar materials for one patient profile."""
     with closing(get_connection()) as connection:
         rows = connection.execute(
@@ -171,7 +207,7 @@ def list_materials(patient_id: int, *, limit: int = 100) -> list[FamiliarMateria
     return [FamiliarMaterial.from_row(row) for row in rows]
 
 
-def save_material(patient_id: int, payload: dict[str, Any], material_id: int | None = None) -> FamiliarMaterial:
+def save_material(patient_id: int | str, payload: dict[str, Any], material_id: int | None = None) -> FamiliarMaterial:
     """Create or update one familiar material."""
     now = _now_text()
     normalized = {
@@ -193,11 +229,15 @@ def save_material(patient_id: int, payload: dict[str, Any], material_id: int | N
         "suggested_use_scene": _clean_text(payload.get("suggested_use_scene")),
         "related_time": _clean_text(payload.get("related_time")),
         "sensitivity_level": _clean_text(payload.get("sensitivity_level")),
-        "tags": _clean_text(payload.get("tags")),
+        "tags": _normalize_tags(payload.get("tags")),
         "safety_note": _clean_text(payload.get("safety_note")),
+        "photo_year": _clean_int(payload.get("photo_year")),
+        "story_text": _clean_text(payload.get("story_text"))[:500],
+        "voice_note_path": _clean_text(payload.get("voice_note_path")),
         "is_sensitive": _clean_bool(payload.get("is_sensitive")),
         "is_active": _clean_active(payload.get("is_active")),
     }
+    normalized["photo_decade"] = _clean_text(payload.get("photo_decade")) or photo_decade_from_year(normalized["photo_year"])
     if normalized["material_type"] == "sensitive_memory":
         normalized["is_sensitive"] = True
 
@@ -225,6 +265,10 @@ def save_material(patient_id: int, payload: dict[str, Any], material_id: int | N
                         sensitivity_level = ?,
                         tags = ?,
                         safety_note = ?,
+                        photo_year = ?,
+                        photo_decade = ?,
+                        story_text = ?,
+                        voice_note_path = ?,
                         is_sensitive = ?,
                         is_active = ?,
                         updated_at = ?
@@ -245,6 +289,10 @@ def save_material(patient_id: int, payload: dict[str, Any], material_id: int | N
                         normalized["sensitivity_level"],
                         normalized["tags"],
                         normalized["safety_note"],
+                        normalized["photo_year"],
+                        normalized["photo_decade"],
+                        normalized["story_text"],
+                        normalized["voice_note_path"],
                         int(normalized["is_sensitive"]),
                         int(normalized["is_active"]),
                         now,
@@ -265,9 +313,10 @@ def save_material(patient_id: int, payload: dict[str, Any], material_id: int | N
                 patient_id, material_type, title, description, related_person,
                 file_path, thumbnail_url, transcript_text, artist, use_scene,
                 suggested_use_scene, related_time, sensitivity_level, tags,
-                safety_note, is_sensitive, is_active, created_at, updated_at
+                safety_note, photo_year, photo_decade, story_text, voice_note_path,
+                is_sensitive, is_active, created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 patient_id,
@@ -285,6 +334,10 @@ def save_material(patient_id: int, payload: dict[str, Any], material_id: int | N
                 normalized["sensitivity_level"],
                 normalized["tags"],
                 normalized["safety_note"],
+                normalized["photo_year"],
+                normalized["photo_decade"],
+                normalized["story_text"],
+                normalized["voice_note_path"],
                 int(normalized["is_sensitive"]),
                 int(normalized["is_active"]),
                 now,
@@ -298,7 +351,7 @@ def save_material(patient_id: int, payload: dict[str, Any], material_id: int | N
     return FamiliarMaterial.from_row(row)
 
 
-def delete_material(patient_id: int, material_id: int) -> bool:
+def delete_material(patient_id: int | str, material_id: int) -> bool:
     """Delete one familiar material."""
     with closing(get_connection()) as connection:
         cursor = connection.execute(
@@ -307,6 +360,86 @@ def delete_material(patient_id: int, material_id: int) -> bool:
         )
         connection.commit()
     return bool(cursor.rowcount)
+
+
+def get_material_by_id(material_id: int) -> FamiliarMaterial | None:
+    """按素材 id 查一条记录，用于语音说明上传等跨页面操作。"""
+    with closing(get_connection()) as connection:
+        row = connection.execute(
+            "SELECT * FROM familiar_materials WHERE id = ?",
+            (material_id,),
+        ).fetchone()
+    return FamiliarMaterial.from_row(row) if row else None
+
+
+def update_voice_note_path(material_id: int, voice_note_path: str) -> FamiliarMaterial | None:
+    """保存照护者录制的语音说明路径。"""
+    with closing(get_connection()) as connection:
+        connection.execute(
+            "UPDATE familiar_materials SET voice_note_path = ?, updated_at = ? WHERE id = ?",
+            (_clean_text(voice_note_path), _now_text(), material_id),
+        )
+        connection.commit()
+        row = connection.execute(
+            "SELECT * FROM familiar_materials WHERE id = ?",
+            (material_id,),
+        ).fetchone()
+    return FamiliarMaterial.from_row(row) if row else None
+
+
+def update_timeline_fields(material_id: int, payload: dict[str, Any]) -> FamiliarMaterial | None:
+    """只更新相册时间线相关字段，避免覆盖旧素材信息。"""
+    allowed: dict[str, Any] = {}
+    if "photo_year" in payload:
+        year = _clean_int(payload.get("photo_year"))
+        allowed["photo_year"] = year
+        allowed["photo_decade"] = _clean_text(payload.get("photo_decade")) or photo_decade_from_year(year)
+    elif "photo_decade" in payload:
+        allowed["photo_decade"] = _clean_text(payload.get("photo_decade"))
+    if "story_text" in payload:
+        allowed["story_text"] = _clean_text(payload.get("story_text"))[:500]
+    if "tags" in payload:
+        allowed["tags"] = _normalize_tags(payload.get("tags"))
+    if not allowed:
+        return get_material_by_id(material_id)
+
+    allowed["updated_at"] = _now_text()
+    assignments = ", ".join(f"{column} = ?" for column in allowed)
+    values = list(allowed.values()) + [material_id]
+    with closing(get_connection()) as connection:
+        connection.execute(
+            f"UPDATE familiar_materials SET {assignments} WHERE id = ?",
+            values,
+        )
+        connection.commit()
+        row = connection.execute(
+            "SELECT * FROM familiar_materials WHERE id = ?",
+            (material_id,),
+        ).fetchone()
+    return FamiliarMaterial.from_row(row) if row else None
+
+
+def timeline_materials(patient_id: int | str) -> list[FamiliarMaterial]:
+    """返回时间线相册素材，优先按年份和更新时间排序。"""
+    with closing(get_connection()) as connection:
+        rows = connection.execute(
+            """
+            SELECT * FROM familiar_materials
+            WHERE patient_id = ? AND is_active = 1
+            ORDER BY COALESCE(photo_year, 9999) ASC, updated_at DESC, id DESC
+            """,
+            (patient_id,),
+        ).fetchall()
+    return [FamiliarMaterial.from_row(row) for row in rows]
+
+
+def grouped_timeline(patient_id: int | str) -> dict[str, list[dict[str, Any]]]:
+    """按年代分组返回相册素材，供前端瀑布流使用。"""
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for material in timeline_materials(patient_id):
+        key = material.photo_decade or photo_decade_from_year(material.photo_year) or "其他"
+        grouped.setdefault(key, []).append(material.to_dict())
+    return grouped
 
 
 def seed_demo_materials(patient_id: int) -> int:
@@ -424,6 +557,6 @@ def build_prompt_summary(patient_id: int, user_message: str, *, max_items: int =
     return "\n".join(f"- {line}" for line in lines)
 
 
-def get_material_or_404(patient_id: int, material_id: int) -> FamiliarMaterial | None:
+def get_material_or_404(patient_id: int | str, material_id: int) -> FamiliarMaterial | None:
     """Return one material if it belongs to the patient."""
     return _row_by_id(patient_id, material_id)

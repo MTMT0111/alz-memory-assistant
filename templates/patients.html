@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="patients-page-shell">
+    <header class="patients-hero">
+        <div>
+            <p class="section-kicker">Patient Profiles</p>
+            <h1>阿尔兹海默症家庭照护辅助系统</h1>
+            <p class="subtitle">选择当前要照护的患者档案，再进入照护工作台、追忆陪伴或档案设置。</p>
+        </div>
+        <div class="patients-hero-actions">
+            <div class="caregiver-account-box">
+                <button id="caregiver-account-trigger" type="button" class="ghost-button">
+                    {{ current_caregiver.avatar_emoji if current_caregiver else "👤" }} {{ current_caregiver.name if current_caregiver else "未登录" }}
+                </button>
+                <div id="caregiver-account-panel" class="caregiver-account-panel" hidden>
+                    <button id="open-pin-panel" type="button" class="ghost-button">修改 PIN</button>
+                </div>
+            </div>
+            <a class="ghost-button" href="/settings">⚙️ 设置</a>
+            <button id="logout-button" type="button" class="ghost-button">退出</button>
+            <button id="open-patient-drawer" type="button" class="primary-button">+ 新建患者</button>
+        </div>
+    </header>
+
+    <section id="patients-grid" class="patients-grid" aria-label="患者档案列表"></section>
+</section>
+
+<div id="patient-drawer-backdrop" class="patient-drawer-backdrop" hidden></div>
+<aside id="patient-drawer" class="patient-drawer" aria-label="患者表单" aria-hidden="true">
+    <div class="patient-drawer-head">
+        <div>
+            <p class="card-kicker">Profile</p>
+            <h2 id="patient-drawer-title">新建患者</h2>
+        </div>
+        <button id="close-patient-drawer" type="button" class="ghost-button">关闭</button>
+    </div>
+    <form id="patient-create-form" class="patient-form">
+        <input id="patient-edit-id" type="hidden">
+        <label>
+            <span>头像标识</span>
+            <div id="patient-avatar-options" class="patient-avatar-options" role="radiogroup" aria-label="头像标识">
+                {% for emoji in ["👵", "👴", "👩", "👨", "🧓"] %}
+                <button type="button" class="patient-avatar-choice" data-emoji="{{ emoji }}" aria-label="{{ emoji }}">{{ emoji }}</button>
+                {% endfor %}
+            </div>
+        </label>
+        <label>
+            <span>姓名</span>
+            <input id="patient-name" name="name" type="text" required placeholder="例如：李桂兰">
+        </label>
+        <label>
+            <span>年龄</span>
+            <input id="patient-age" name="age" type="number" min="0" max="120" placeholder="例如：78">
+        </label>
+        <label>
+            <span>与您的关系</span>
+            <input id="patient-relation" name="relation" type="text" placeholder="例如：母亲">
+        </label>
+        <label>
+            <span>病情阶段</span>
+            <select id="patient-stage" name="stage">
+                <option value="轻度">轻度</option>
+                <option value="中度">中度</option>
+                <option value="重度">重度</option>
+            </select>
+        </label>
+        <label>
+            <span>备注</span>
+            <textarea id="patient-notes" name="notes" rows="4" placeholder="可记录照护注意事项。"></textarea>
+        </label>
+        <div class="patient-form-actions">
+            <button id="patient-save-button" type="submit" class="primary-button">保存患者</button>
+            <button id="patient-delete-button" type="button" class="ghost-button patient-delete-button" hidden>停用档案</button>
+        </div>
+        <p id="patient-form-status" class="summary-note-text" aria-live="polite"></p>
+    </form>
+</aside>
+
+<div id="pin-panel-backdrop" class="patient-drawer-backdrop" hidden></div>
+<aside id="pin-panel" class="patient-drawer pin-panel" aria-label="修改 PIN" aria-hidden="true">
+    <div class="patient-drawer-head">
+        <div>
+            <p class="card-kicker">Security</p>
+            <h2>修改登录 PIN</h2>
+        </div>
+        <button id="close-pin-panel" type="button" class="ghost-button">关闭</button>
+    </div>
+    <form id="change-pin-form" class="patient-form">
+        <label>
+            <span>旧 PIN</span>
+            <input id="pin-old" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required>
+        </label>
+        <label>
+            <span>新 PIN</span>
+            <input id="pin-new" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required>
+        </label>
+        <label>
+            <span>再次输入新 PIN</span>
+            <input id="pin-new-confirm" type="password" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" required>
+        </label>
+        <div class="patient-form-actions">
+            <button type="submit" class="primary-button">保存新 PIN</button>
+        </div>
+        <p id="pin-form-status" class="summary-note-text" aria-live="polite"></p>
+    </form>
+</aside>
+
+<script>
+window.PATIENTS_BOOTSTRAP = {
+    patients: {{ patients | tojson }},
+    currentCaregiver: {{ current_caregiver | tojson }}
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    const grid = document.getElementById("patients-grid");
+    const drawer = document.getElementById("patient-drawer");
+    const backdrop = document.getElementById("patient-drawer-backdrop");
+    const openButton = document.getElementById("open-patient-drawer");
+    const closeButton = document.getElementById("close-patient-drawer");
+    const form = document.getElementById("patient-create-form");
+    const status = document.getElementById("patient-form-status");
+    const title = document.getElementById("patient-drawer-title");
+    const saveButton = document.getElementById("patient-save-button");
+    const deleteButton = document.getElementById("patient-delete-button");
+    const editId = document.getElementById("patient-edit-id");
+    const caregiverAccountTrigger = document.getElementById("caregiver-account-trigger");
+    const caregiverAccountPanel = document.getElementById("caregiver-account-panel");
+    const openPinPanelButton = document.getElementById("open-pin-panel");
+    const pinPanel = document.getElementById("pin-panel");
+    const pinBackdrop = document.getElementById("pin-panel-backdrop");
+    const closePinPanelButton = document.getElementById("close-pin-panel");
+    const changePinForm = document.getElementById("change-pin-form");
+    const pinFormStatus = document.getElementById("pin-form-status");
+    const logoutButton = document.getElementById("logout-button");
+    let patients = Array.isArray(window.PATIENTS_BOOTSTRAP.patients) ? [...window.PATIENTS_BOOTSTRAP.patients] : [];
+    const currentCaregiver = window.PATIENTS_BOOTSTRAP.currentCaregiver || null;
+    let selectedAvatar = "👵";
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function stageClass(stage) {
+        if (stage === "重度") return "severe";
+        if (stage === "中度") return "moderate";
+        return "mild";
+    }
+
+    function conversationText(days) {
+        if (days === null || days === undefined) return "暂无对话";
+        return Number(days) === 0 ? "今天" : `${Number(days)}天前`;
+    }
+
+    function setDrawerOpen(open) {
+        drawer.classList.toggle("open", open);
+        drawer.setAttribute("aria-hidden", open ? "false" : "true");
+        backdrop.hidden = !open;
+    }
+
+    function setPinPanelOpen(open) {
+        pinPanel.classList.toggle("open", open);
+        pinPanel.setAttribute("aria-hidden", open ? "false" : "true");
+        pinBackdrop.hidden = !open;
+        caregiverAccountPanel.hidden = true;
+    }
+
+    function setAvatar(emoji) {
+        selectedAvatar = emoji || "👵";
+        document.querySelectorAll(".patient-avatar-choice").forEach((button) => {
+            button.classList.toggle("active", button.dataset.emoji === selectedAvatar);
+        });
+    }
+
+    function resetForm() {
+        editId.value = "";
+        title.textContent = "新建患者";
+        saveButton.textContent = "保存患者";
+        deleteButton.hidden = true;
+        form.reset();
+        setAvatar("👵");
+        status.textContent = "";
+    }
+
+    function fillForm(patient) {
+        editId.value = patient.id || "";
+        title.textContent = "编辑患者";
+        saveButton.textContent = "保存修改";
+        deleteButton.hidden = false;
+        document.getElementById("patient-name").value = patient.name || "";
+        document.getElementById("patient-age").value = patient.age ?? "";
+        document.getElementById("patient-relation").value = patient.relation || "";
+        document.getElementById("patient-stage").value = patient.stage || "轻度";
+        document.getElementById("patient-notes").value = patient.notes || "";
+        setAvatar(patient.avatar_emoji || "👵");
+        status.textContent = "";
+    }
+
+    function patientCard(patient) {
+        return `
+            <article class="patient-card" data-patient-id="${escapeHtml(patient.id)}">
+                <button type="button" class="patient-edit-icon" data-patient-id="${escapeHtml(patient.id)}" aria-label="编辑 ${escapeHtml(patient.name)}">✏️</button>
+                <div class="patient-card-main">
+                    <div class="patient-avatar" aria-hidden="true">${escapeHtml(patient.avatar_emoji || "👵")}</div>
+                    <div>
+                        <h2>${escapeHtml(patient.name || "未命名患者")}</h2>
+                        <p>${patient.age ?? "年龄未填"} 岁 · ${escapeHtml(patient.relation || "关系未填")}</p>
+                        <span class="patient-stage-pill ${stageClass(patient.stage)}">${escapeHtml(patient.stage || "轻度")}</span>
+                    </div>
+                </div>
+                ${patient.notes ? `<p class="patient-card-notes">${escapeHtml(patient.notes)}</p>` : ""}
+                <p class="patient-card-stats" id="patient-stats-${escapeHtml(patient.id)}">
+                    最近对话：${conversationText(patient.last_conversation_days)} · 记忆条目：${patient.memory_count ?? 0}条 · 今日情绪：${escapeHtml(patient.today_mood_emoji || "—")}
+                </p>
+                <div class="patient-card-actions">
+                    <a class="ghost-button" href="/care-portal/${encodeURIComponent(patient.id)}">进入照护</a>
+                    <a class="ghost-button" href="/reminiscence/${encodeURIComponent(patient.id)}">追忆陪伴</a>
+                    <a class="ghost-button" href="/photo-timeline/${encodeURIComponent(patient.id)}">📷 相册</a>
+                    <a class="ghost-button" href="/patient/${encodeURIComponent(patient.id)}/settings">设置</a>
+                </div>
+            </article>
+        `;
+    }
+
+    function bindCards() {
+        grid.querySelectorAll(".patient-edit-icon").forEach((button) => {
+            button.addEventListener("click", () => {
+                const patient = patients.find((item) => item.id === button.dataset.patientId);
+                if (!patient) return;
+                fillForm(patient);
+                setDrawerOpen(true);
+            });
+        });
+    }
+
+    function renderPatients() {
+        grid.innerHTML = patients.length ? patients.map(patientCard).join("") : `
+            <div class="patients-empty-state">
+                <strong>还没有患者档案。</strong>
+                <span>点击右上角“+ 新建患者”添加第一位需要照护的家人。</span>
+            </div>
+        `;
+        bindCards();
+        patients.forEach(refreshPatientStats);
+    }
+
+    async function loadPatients() {
+        const response = await fetch("/api/patients");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "患者列表加载失败");
+        patients = Array.isArray(data.patients) ? data.patients : [];
+        renderPatients();
+    }
+
+    async function refreshPatientStats(patient) {
+        try {
+            const response = await fetch(`/api/patients/${encodeURIComponent(patient.id)}`);
+            const data = await response.json();
+            if (!response.ok) return;
+            Object.assign(patient, data);
+            const node = document.getElementById(`patient-stats-${patient.id}`);
+            if (node) {
+                node.textContent = `最近对话：${conversationText(data.last_conversation_days)} · 记忆条目：${data.memory_count ?? 0}条 · 今日情绪：${data.today_mood_emoji || "—"}`;
+            }
+        } catch (error) {
+            // 统计加载失败不影响进入照护。
+        }
+    }
+
+    openButton?.addEventListener("click", () => {
+        resetForm();
+        setDrawerOpen(true);
+    });
+    closeButton?.addEventListener("click", () => setDrawerOpen(false));
+    backdrop?.addEventListener("click", () => setDrawerOpen(false));
+    caregiverAccountTrigger?.addEventListener("click", () => {
+        caregiverAccountPanel.hidden = !caregiverAccountPanel.hidden;
+    });
+    openPinPanelButton?.addEventListener("click", () => setPinPanelOpen(true));
+    closePinPanelButton?.addEventListener("click", () => setPinPanelOpen(false));
+    pinBackdrop?.addEventListener("click", () => setPinPanelOpen(false));
+    document.querySelectorAll(".patient-avatar-choice").forEach((button) => {
+        button.addEventListener("click", () => setAvatar(button.dataset.emoji || "👵"));
+    });
+
+    form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        status.textContent = "正在保存...";
+        const patientId = editId.value.trim();
+        const payload = {
+            name: document.getElementById("patient-name").value.trim(),
+            age: document.getElementById("patient-age").value ? Number(document.getElementById("patient-age").value) : null,
+            relation: document.getElementById("patient-relation").value.trim(),
+            stage: document.getElementById("patient-stage").value,
+            notes: document.getElementById("patient-notes").value.trim(),
+            avatar_emoji: selectedAvatar,
+        };
+        try {
+            const response = await fetch(patientId ? `/api/patients/${encodeURIComponent(patientId)}` : "/api/patients", {
+                method: patientId ? "PUT" : "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "保存失败");
+            status.textContent = "已保存。";
+            await loadPatients();
+            setDrawerOpen(false);
+        } catch (error) {
+            status.textContent = error.message || "保存失败，请稍后再试。";
+        }
+    });
+
+    deleteButton?.addEventListener("click", async () => {
+        const patientId = editId.value.trim();
+        const patient = patients.find((item) => item.id === patientId);
+        if (!patient || !window.confirm(`确认停用 ${patient.name} 的档案？停用后可在设置中恢复。`)) {
+            return;
+        }
+        status.textContent = "正在停用...";
+        try {
+            const response = await fetch(`/api/patients/${encodeURIComponent(patientId)}`, { method: "DELETE" });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "停用失败");
+            patients = patients.filter((item) => item.id !== patientId);
+            renderPatients();
+            setDrawerOpen(false);
+        } catch (error) {
+            status.textContent = error.message || "停用失败，请稍后再试。";
+        }
+    });
+
+    changePinForm?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!currentCaregiver?.id) return;
+        const oldPin = document.getElementById("pin-old").value.trim();
+        const newPin = document.getElementById("pin-new").value.trim();
+        const confirmPin = document.getElementById("pin-new-confirm").value.trim();
+        if (newPin !== confirmPin) {
+            pinFormStatus.textContent = "两次输入的新 PIN 不一致。";
+            return;
+        }
+        pinFormStatus.textContent = "正在更新...";
+        try {
+            const response = await fetch(`/api/caregivers/${encodeURIComponent(currentCaregiver.id)}/pin`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ old_pin: oldPin, new_pin: newPin }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "修改失败");
+            pinFormStatus.textContent = "PIN 已更新。";
+            changePinForm.reset();
+            window.setTimeout(() => setPinPanelOpen(false), 600);
+        } catch (error) {
+            pinFormStatus.textContent = error.message || "修改失败，请稍后再试。";
+        }
+    });
+
+    logoutButton?.addEventListener("click", async () => {
+        try {
+            await fetch("/api/logout", { method: "POST" });
+        } finally {
+            window.location.href = "/login";
+        }
+    });
+
+    setAvatar("👵");
+    renderPatients();
+});
+</script>
+{% endblock %}

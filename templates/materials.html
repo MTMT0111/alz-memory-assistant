@@ -5,12 +5,14 @@
     <header class="materials-library-header">
         <div>
             <p class="section-kicker">Familiar Materials</p>
-            <h1>李奶奶熟悉素材库</h1>
+            <h1>{{ profile.name or "患者" }}熟悉素材库</h1>
             <p class="subtitle">家属可在这里维护照片、语音留言、熟悉音乐、旧地点、旧事件和敏感记忆，用于患者端回忆陪伴与低刺激对话。</p>
         </div>
         <div class="materials-header-actions">
-            <a class="ghost-button" href="/conversation?debug=1">去患者端测试</a>
-            <a class="ghost-button" href="/chat-history">查看记忆候选</a>
+            <button id="materials-drawer-open-button" type="button" class="ghost-button">添加照片 / 素材</button>
+            <a class="ghost-button" href="/conversation/{{ caregiver_patient_id }}?debug=1">去患者端测试</a>
+            <a class="ghost-button" href="/photo-timeline/{{ caregiver_patient_id }}">查看相册</a>
+            <a class="ghost-button" href="/chat-history/{{ caregiver_patient_id }}">查看记忆候选</a>
         </div>
     </header>
 
@@ -19,8 +21,8 @@
             <p class="card-kicker">患者与用途</p>
             <h2>家属录入患者熟悉资料的主页面</h2>
             <div class="materials-profile-pills">
-                <span><strong>当前患者：</strong>李桂兰（李奶奶）</span>
-                <span><strong>主要家属：</strong>陈小雨</span>
+                <span><strong>当前患者：</strong>{{ profile.name or "患者" }}</span>
+                <span><strong>关系/阶段：</strong>{{ profile.family_info or profile.preferences or "未填写" }}</span>
                 <span><strong>用途：</strong>回忆陪伴 / 对话上下文 / 家属审核记忆沉淀</span>
             </div>
         </div>
@@ -82,6 +84,7 @@
                     <p class="card-kicker">新增 / 编辑素材</p>
                     <h2 id="materials-form-title">添加熟悉素材</h2>
                 </div>
+                <button id="materials-drawer-close-button" type="button" class="ghost-button materials-drawer-close">关闭</button>
                 <span id="material-form-status" class="status-pill neutral">准备就绪</span>
             </div>
             <input id="material-id" type="hidden">
@@ -106,7 +109,7 @@
                     </label>
                     <label class="field">
                         <span>标题</span>
-                        <input id="material-title" type="text" placeholder="例如：女儿小雨照片">
+                        <input id="material-title" type="text" placeholder="例如：家人合影、老房子照片">
                     </label>
                     <label class="field materials-span-two">
                         <span>描述</span>
@@ -114,15 +117,23 @@
                     </label>
                     <label class="field">
                         <span>关联人物</span>
-                        <input id="material-related-person" type="text" placeholder="例如：陈小雨">
+                        <input id="material-related-person" type="text" placeholder="例如：女儿、儿子、老朋友">
                     </label>
                     <label class="field">
                         <span>相关时间</span>
                         <input id="material-related-time" type="text" placeholder="例如：年轻时、下午、晚上 8 点">
                     </label>
+                    <label class="field">
+                        <span>照片年份</span>
+                        <input id="material-photo-year" type="number" min="1900" max="2100" placeholder="例如：1978">
+                    </label>
                     <label class="field materials-span-two">
                         <span>标签</span>
-                        <input id="material-tags" type="text" placeholder="例如：小雨, 老歌, 温州, 菜场">
+                        <input id="material-tags" type="text" placeholder="例如：家人, 老歌, 老家, 菜场">
+                    </label>
+                    <label class="field materials-span-two">
+                        <span>照片故事</span>
+                        <textarea id="material-story-text" rows="4" maxlength="500" placeholder="写下这张照片背后的故事，最多 500 字。"></textarea>
                     </label>
                 </div>
             </section>
@@ -147,7 +158,7 @@
                     </label>
                     <label class="field materials-span-two">
                         <span>音频转写</span>
-                        <textarea id="material-transcript-text" rows="3" placeholder="例如：小雨说晚上 8 点会联系妈妈，请妈妈安心休息。"></textarea>
+                        <textarea id="material-transcript-text" rows="3" placeholder="例如：家人说晚上会联系，请老人安心休息。"></textarea>
                     </label>
                 </div>
             </section>

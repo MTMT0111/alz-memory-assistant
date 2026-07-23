@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="consent-page-shell" data-patient-id="{{ consent_patient_id }}">
+    <header class="consent-page-header">
+        <div class="consent-logo-mark" aria-hidden="true">ALZ</div>
+        <p class="section-kicker">Informed Consent</p>
+        <h1>阿尔兹海默症家庭照护 AI 系统</h1>
+        <p class="subtitle">首次使用前，请照护者完整阅读并确认数据使用方式。</p>
+        <div class="consent-progress" aria-label="同意流程进度">
+            <span class="active">1 说明</span>
+            <span>2 确认</span>
+            <span>3 签署</span>
+        </div>
+    </header>
+
+<section class="dashboard-card caregiver-card consent-card consent-step-card">
+    <div class="caregiver-card-head">
+        <div>
+            <p class="card-kicker">系统说明</p>
+            <h2>请先阅读</h2>
+        </div>
+    </div>
+    <div class="consent-copy">
+        <p>本系统为家庭照护辅助工具，不是医疗设备，不提供诊断或治疗建议。</p>
+        <p>系统会记录对话内容和照护者录入的患者信息，用于提供个性化陪伴对话。</p>
+        <p>数据存储在本地设备，不会上传至第三方，API 调用仅传输最小必要信息（不含完整个人资料）。</p>
+        <p>照护者可随时在设置页面删除所有数据。</p>
+    </div>
+</section>
+
+<section class="dashboard-card caregiver-card consent-card consent-step-card">
+    <div class="caregiver-card-head">
+        <div>
+            <p class="card-kicker">数据使用清单</p>
+            <h2>逐项确认</h2>
+        </div>
+    </div>
+    <form id="consent-form" class="consent-form">
+        <div class="consent-checklist">
+            <label class="consent-check-item">
+                <input type="checkbox" required>
+                <span><strong aria-hidden="true">📋</strong>我了解本系统会记录患者与 AI 的对话内容</span>
+            </label>
+            <label class="consent-check-item">
+                <input type="checkbox" required>
+                <span><strong aria-hidden="true">📡</strong>我了解系统会将对话中的关键信息提取为"记忆条目"，需由我审批后生效</span>
+            </label>
+            <label class="consent-check-item">
+                <input type="checkbox" required>
+                <span><strong aria-hidden="true">🔒</strong>我了解系统调用 AI 接口时会传输简短的患者背景摘要（不含姓名、身份证等敏感信息）</span>
+            </label>
+            <label class="consent-check-item">
+                <input type="checkbox" required>
+                <span><strong aria-hidden="true">✅</strong>我确认已获得患者本人或其法定监护人的同意</span>
+            </label>
+        </div>
+
+        <div class="consent-signature">
+            <label class="field">
+                <span>照护者姓名</span>
+                <input id="consented-by" type="text" autocomplete="name" required placeholder="请输入照护者姓名">
+            </label>
+            <button id="consent-submit-button" type="submit" class="login-continue-button">确认同意并开始使用</button>
+            <p id="consent-status" class="summary-note-text" aria-live="polite">
+                {% if consent_record.consented %}
+                已在 {{ consent_record.consent_time }} 完成同意。
+                {% else %}
+                请勾选全部项目并签署姓名。
+                {% endif %}
+            </p>
+        </div>
+    </form>
+</section>
+</section>
+
+<script>
+(function initConsentPage() {
+    const header = document.querySelector(".consent-page-shell");
+    const patientId = header?.dataset.patientId || "";
+    const form = document.getElementById("consent-form");
+    const nameInput = document.getElementById("consented-by");
+    const statusNode = document.getElementById("consent-status");
+    const submitButton = document.getElementById("consent-submit-button");
+    const checks = Array.from(form?.querySelectorAll("input[type='checkbox']") || []);
+
+    function setStatus(text) {
+        if (statusNode) {
+            statusNode.textContent = text;
+        }
+    }
+
+    function updateSubmitState() {
+        const allChecked = checks.every((item) => item.checked);
+        const hasName = String(nameInput?.value || "").trim().length > 0;
+        if (submitButton) {
+            submitButton.disabled = !(allChecked && hasName);
+        }
+    }
+
+    checks.forEach((item) => item.addEventListener("change", updateSubmitState));
+    nameInput?.addEventListener("input", updateSubmitState);
+    updateSubmitState();
+
+    form?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const consentedBy = String(nameInput?.value || "").trim();
+        const allChecked = Array.from(form.querySelectorAll("input[type='checkbox']")).every((item) => item.checked);
+        if (!consentedBy || !allChecked) {
+            setStatus("请填写照护者姓名，并勾选全部确认项。");
+            return;
+        }
+
+        if (submitButton) {
+            submitButton.disabled = true;
+            submitButton.textContent = "正在记录...";
+        }
+        try {
+            const response = await fetch(`/api/consent/${encodeURIComponent(patientId)}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    consented_by: consentedBy,
+                    consent_version: "v1.0"
+                })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.ok) {
+                throw new Error(data.detail || "同意记录保存失败");
+            }
+            window.location.href = "/care-portal";
+        } catch (error) {
+            console.error(error);
+            setStatus(error instanceof Error ? error.message : "同意记录保存失败，请稍后再试。");
+        } finally {
+            if (submitButton) {
+                submitButton.disabled = false;
+                submitButton.textContent = "确认同意并开始使用";
+                updateSubmitState();
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

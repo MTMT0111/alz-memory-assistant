@@ -1,0 +1,259 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header care-trend-header" data-patient-id="{{ trend_patient_id }}">
+    <div>
+        <p class="section-kicker">Cross-day Care Trend</p>
+        <h1>{{ patient.name if patient is defined else profile.name or "患者" }} · 最近 14 天照护趋势</h1>
+        <p class="subtitle">把每天的用药确认、风险事件和对话活跃度沉淀下来，帮助家属观察跨日变化。</p>
+    </div>
+    <div class="care-trend-actions">
+        <a class="ghost-button" href="/care-portal/{{ trend_patient_id }}">返回照护看板</a>
+        <button id="record-today-button" type="button" class="ghost-button caregiver-primary-link">记录今日</button>
+    </div>
+</section>
+
+<section class="dashboard-card caregiver-card care-trend-chart-card">
+    <div class="caregiver-card-head">
+        <div>
+            <p class="card-kicker">Trend</p>
+            <h2>每日趋势</h2>
+        </div>
+        <span id="care-trend-status" class="summary-note-text">读取中...</span>
+    </div>
+    <div class="care-trend-chart-wrap">
+        <canvas id="care-trend-chart" width="900" height="360" aria-label="最近 14 天照护趋势图"></canvas>
+    </div>
+</section>
+
+<section class="dashboard-card caregiver-card">
+    <div class="caregiver-card-head">
+        <div>
+            <p class="card-kicker">Daily Records</p>
+            <h2>每日记录</h2>
+        </div>
+    </div>
+    <div id="care-trend-list" class="care-trend-list">
+        <div class="log-empty">
+            <strong>暂无跨日记录。</strong>
+            <span>点击“记录今日”后，这里会显示当天摘要。</span>
+        </div>
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function initCareTrendPage() {
+    const header = document.querySelector(".care-trend-header");
+    const patientId = header?.dataset.patientId || "";
+    const statusNode = document.getElementById("care-trend-status");
+    const recordButton = document.getElementById("record-today-button");
+    const listNode = document.getElementById("care-trend-list");
+    const chartCanvas = document.getElementById("care-trend-chart");
+    let chart = null;
+
+    function setStatus(text) {
+        if (statusNode) {
+            statusNode.textContent = text;
+        }
+    }
+
+    function medicationLabel(value) {
+        if (value === 1) {
+            return "已服药";
+        }
+        if (value === 0) {
+            return "未服药";
+        }
+        return "待确认";
+    }
+
+    function medicationDotClass(value) {
+        if (value === 1) {
+            return "taken";
+        }
+        if (value === 0) {
+            return "missed";
+        }
+        return "unknown";
+    }
+
+    function moodEmoji(score) {
+        const value = Number(score || 0);
+        if (!value) {
+            return "—";
+        }
+        if (value < 3) {
+            return "😔";
+        }
+        if (value < 4) {
+            return "😐";
+        }
+        return "😊";
+    }
+
+    function renderList(records) {
+        if (!listNode) {
+            return;
+        }
+        if (!records.length) {
+            listNode.innerHTML = `
+                <div class="care-trend-empty-state">
+                    <strong aria-hidden="true">📅</strong>
+                    <h3>还没有跨日趋势</h3>
+                    <p>点击“记录今日”后，这里会慢慢长出最近 14 天的照护脉络。</p>
+                </div>
+            `;
+            return;
+        }
+        listNode.innerHTML = records.map((item) => `
+            <article class="care-trend-day-card">
+                <div class="care-trend-day-head">
+                    <strong>${item.date || "-"}</strong>
+                    <span class="care-trend-medication ${medicationDotClass(item.medication_taken)}">
+                        <i aria-hidden="true"></i>${medicationLabel(item.medication_taken)}
+                    </span>
+                </div>
+                <div class="care-trend-day-metrics">
+                    <span>风险事件 <strong>${Number(item.risk_events || 0)}</strong> 次</span>
+                    <span>情绪 ${moodEmoji(item.mood_score)} <strong>${item.mood_score ? `${Number(item.mood_score).toFixed(1)}/5` : "暂无"}</strong></span>
+                </div>
+                <p>${item.summary_text || "暂无当日总结。"}</p>
+            </article>
+        `).join("");
+    }
+
+    function normalizedRisk(records, item) {
+        const maxRisk = Math.max(1, ...records.map((record) => Number(record.risk_events || 0)));
+        return Number(item.risk_events || 0) / maxRisk;
+    }
+
+    function normalizedMood(item) {
+        const mood = Number(item.mood_score || 0);
+        if (!mood) {
+            return null;
+        }
+        return Math.max(0, Math.min(1, (mood - 1) / 4));
+    }
+
+    function renderChart(records) {
+        if (!chartCanvas || typeof Chart === "undefined") {
+            return;
+        }
+        const labels = records.map((item) => item.date || "");
+        const medication = records.map((item) => item.medication_taken === null || item.medication_taken === undefined ? null : Number(item.medication_taken));
+        const risk = records.map((item) => normalizedRisk(records, item));
+        const mood = records.map((item) => normalizedMood(item));
+        const moodScore = records.map((item) => item.mood_score === null || item.mood_score === undefined ? null : Number(item.mood_score));
+        if (chart) {
+            chart.destroy();
+        }
+        chart = new Chart(chartCanvas, {
+            type: "line",
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: "用药完成率",
+                        data: medication,
+                        borderColor: "#3f7f68",
+                        backgroundColor: "rgba(63, 127, 104, 0.12)",
+                        tension: 0.28
+                    },
+                    {
+                        label: "风险事件数（归一化）",
+                        data: risk,
+                        borderColor: "#b65b48",
+                        backgroundColor: "rgba(182, 91, 72, 0.12)",
+                        tension: 0.28
+                    },
+                    {
+                        label: "mood_score",
+                        data: mood,
+                        borderColor: "#5c6f9f",
+                        backgroundColor: "rgba(92, 111, 159, 0.12)",
+                        tension: 0.28
+                    },
+                    {
+                        label: "情绪评分",
+                        data: moodScore,
+                        borderColor: "#8a5bb8",
+                        backgroundColor: "rgba(138, 91, 184, 0.12)",
+                        tension: 0.28,
+                        yAxisID: "yMood"
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        min: 0,
+                        max: 1
+                    },
+                    yMood: {
+                        position: "right",
+                        min: 1,
+                        max: 5,
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: "bottom"
+                    }
+                }
+            }
+        });
+    }
+
+    async function loadTrend() {
+        if (!patientId) {
+            setStatus("缺少 patient_id");
+            return;
+        }
+        try {
+            const response = await fetch(`/api/daily-summary/${encodeURIComponent(patientId)}?days=14`);
+            const records = await response.json();
+            const safeRecords = Array.isArray(records) ? records : [];
+            renderChart(safeRecords);
+            renderList(safeRecords);
+            setStatus(safeRecords.length ? `已读取 ${safeRecords.length} 天记录` : "暂无跨日记录");
+        } catch (error) {
+            console.error(error);
+            setStatus("趋势读取失败");
+        }
+    }
+
+    async function recordToday() {
+        if (!patientId || !recordButton) {
+            return;
+        }
+        recordButton.disabled = true;
+        recordButton.textContent = "记录中...";
+        try {
+            const response = await fetch(`/api/daily-summary/${encodeURIComponent(patientId)}`, {
+                method: "POST"
+            });
+            if (!response.ok) {
+                throw new Error("记录失败");
+            }
+            await loadTrend();
+            setStatus("今日已记录");
+        } catch (error) {
+            console.error(error);
+            setStatus("记录今日失败");
+        } finally {
+            recordButton.disabled = false;
+            recordButton.textContent = "记录今日";
+        }
+    }
+
+    recordButton?.addEventListener("click", recordToday);
+    loadTrend();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header">
+    <div>
+        <p class="section-kicker">System Settings</p>
+        <h1>本地模型与存储设置</h1>
+        <p class="subtitle">在这里查看 Ollama、本地缓存和 API Provider 状态。网络不稳时，可以切到本地优先模式。</p>
+    </div>
+    <a class="ghost-button" href="/patients">返回患者列表</a>
+</section>
+
+<section class="device-settings-layout caregiver-settings-layout">
+    <article class="dashboard-card caregiver-card device-settings-card caregiver-card-span-two">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">LLM 配置</p>
+                <h2>API 模式 / 本地模式</h2>
+            </div>
+            <div id="settings-llm-mode-pill" class="status-pill">{{ "本地模式" if local_llm_runtime.enabled else "API 模式" }}</div>
+        </div>
+
+        <div class="device-toggle-list">
+            <label class="device-toggle-row">
+                <div>
+                    <strong>本地优先</strong>
+                    <span>开启后优先使用本地 Ollama；失败时自动回落到已配置的 API Provider。</span>
+                </div>
+                <button type="button" id="settings-local-toggle" class="toggle-chip" aria-pressed="{{ 'true' if local_llm_runtime.enabled else 'false' }}">
+                    {{ "开启" if local_llm_runtime.enabled else "关闭" }}
+                </button>
+            </label>
+        </div>
+
+        <div class="care-placeholder-grid">
+            <div class="care-placeholder-item">
+                <strong>当前模式</strong>
+                <span id="settings-current-mode-text">{{ "本地模式" if local_llm_runtime.enabled else "API 模式" }}</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>本地模型状态</strong>
+                <span id="settings-ollama-status-text">正在检查...</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>本地模型名</strong>
+                <span id="settings-ollama-model-text">{{ local_llm_runtime.model }}</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>本地地址</strong>
+                <span>{{ local_llm_runtime.base_url }}</span>
+            </div>
+        </div>
+
+        <p id="settings-llm-status" class="summary-note-text">若 Ollama 未运行，系统会自动继续尝试 DeepSeek / MiniMax / OpenAI 等已配置 Provider。</p>
+
+        <div class="soft-list caregiver-soft-list">
+            {% for provider in provider_statuses %}
+            <div class="soft-list-row">
+                <strong>{{ provider.provider }}</strong>
+                <span>{{ "已配置" if provider.configured else "未配置" }} · {{ provider.reason }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="dashboard-card caregiver-card device-settings-card caregiver-card-span-two">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">数据存储</p>
+                <h2>SQLite 与 ChromaDB</h2>
+            </div>
+        </div>
+
+        <div class="care-placeholder-grid">
+            <div class="care-placeholder-item">
+                <strong>数据库路径</strong>
+                <span id="settings-db-path">读取中...</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>数据库大小</strong>
+                <span id="settings-db-size">读取中...</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>Chroma 路径</strong>
+                <span id="settings-chroma-path">读取中...</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>记忆条目数</strong>
+                <span id="settings-chroma-count">读取中...</span>
+            </div>
+        </div>
+
+        <div class="patient-data-actions">
+            <button id="settings-clear-cache" type="button" class="ghost-button">清空向量缓存</button>
+        </div>
+        <p id="settings-storage-status" class="summary-note-text">清空缓存只删除 ChromaDB，不影响 SQLite 主库与已审批数据。</p>
+    </article>
+
+    <article class="dashboard-card caregiver-card device-settings-card caregiver-card-span-two">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">通知推送</p>
+                <h2>企业微信 / 钉钉 Webhook</h2>
+            </div>
+            <div id="settings-notify-pill" class="status-pill">{{ "已配置" if notify_runtime.configured else "未配置" }}</div>
+        </div>
+
+        <div class="care-placeholder-grid">
+            <div class="care-placeholder-item">
+                <strong>当前 Webhook</strong>
+                <span id="settings-notify-configured">{{ "已配置" if notify_runtime.configured else "未配置" }}</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>通知类型</strong>
+                <span id="settings-notify-type-text">{{ "钉钉" if notify_runtime.type == "dingtalk" else "企业微信" }}</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>用药超时阈值</strong>
+                <span>{{ notify_runtime.overdue_minutes }} 分钟</span>
+            </div>
+        </div>
+
+        <form id="settings-notify-form" class="patient-form-grid">
+            <label>
+                Webhook URL
+                <input id="settings-notify-url" type="url" placeholder="https://..." autocomplete="off">
+            </label>
+            <label>
+                类型
+                <select id="settings-notify-type">
+                    <option value="wecom" {% if notify_runtime.type == "wecom" %}selected{% endif %}>企业微信</option>
+                    <option value="dingtalk" {% if notify_runtime.type == "dingtalk" %}selected{% endif %}>钉钉</option>
+                </select>
+            </label>
+            <div class="patient-data-actions">
+                <button type="submit" class="primary-button">保存 Webhook</button>
+                <button id="settings-test-notify" type="button" class="ghost-button">发送测试消息</button>
+            </div>
+        </form>
+        <p id="settings-notify-status" class="summary-note-text">Webhook URL 不会在页面回显；留空时通知链路静默关闭。</p>
+    </article>
+
+    <article class="dashboard-card caregiver-card device-settings-card caregiver-card-span-two">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">移动端安装</p>
+                <h2>📱 安装到手机主屏幕</h2>
+            </div>
+            <div id="settings-pwa-pill" class="status-pill">检查中</div>
+        </div>
+
+        <p class="summary-note-text">在手机浏览器中打开本页面，点击菜单中的“添加到主屏幕”即可安装。</p>
+        <div class="care-placeholder-grid">
+            <div class="care-placeholder-item">
+                <strong>Service Worker 状态</strong>
+                <span id="settings-pwa-status">正在检查...</span>
+            </div>
+            <div class="care-placeholder-item">
+                <strong>启动页面</strong>
+                <span>/patients</span>
+            </div>
+        </div>
+        <div class="patient-data-actions">
+            <button id="settings-clear-pwa-cache" type="button" class="ghost-button">刷新缓存</button>
+        </div>
+        <p id="settings-pwa-cache-status" class="summary-note-text">刷新缓存会注销当前浏览器中的 Service Worker，刷新页面后会自动重新注册。</p>
+    </article>
+</section>
+
+<script>
+window.SETTINGS_BOOTSTRAP = {
+    localRuntime: {{ local_llm_runtime | tojson }},
+    providerStatuses: {{ provider_statuses | tojson }},
+    notifyRuntime: {{ notify_runtime | tojson }}
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    const localToggle = document.getElementById("settings-local-toggle");
+    const modePill = document.getElementById("settings-llm-mode-pill");
+    const currentModeText = document.getElementById("settings-current-mode-text");
+    const ollamaStatusText = document.getElementById("settings-ollama-status-text");
+    const ollamaModelText = document.getElementById("settings-ollama-model-text");
+    const llmStatus = document.getElementById("settings-llm-status");
+    const storageStatus = document.getElementById("settings-storage-status");
+    const notifyStatus = document.getElementById("settings-notify-status");
+    const notifyPill = document.getElementById("settings-notify-pill");
+    const notifyConfiguredText = document.getElementById("settings-notify-configured");
+    const notifyTypeText = document.getElementById("settings-notify-type-text");
+    const pwaPill = document.getElementById("settings-pwa-pill");
+    const pwaStatus = document.getElementById("settings-pwa-status");
+    const pwaCacheStatus = document.getElementById("settings-pwa-cache-status");
+    let localEnabled = !!window.SETTINGS_BOOTSTRAP.localRuntime?.enabled;
+    let notifyConfigured = !!window.SETTINGS_BOOTSTRAP.notifyRuntime?.configured;
+
+    function renderMode() {
+        const text = localEnabled ? "本地模式" : "API 模式";
+        modePill.textContent = text;
+        currentModeText.textContent = text;
+        localToggle.textContent = localEnabled ? "开启" : "关闭";
+        localToggle.setAttribute("aria-pressed", localEnabled ? "true" : "false");
+    }
+
+    function renderNotify(configured, type) {
+        notifyConfigured = !!configured;
+        const typeLabel = type === "dingtalk" ? "钉钉" : "企业微信";
+        notifyPill.textContent = notifyConfigured ? "已配置" : "未配置";
+        notifyConfiguredText.textContent = notifyConfigured ? "已配置" : "未配置";
+        notifyTypeText.textContent = typeLabel;
+    }
+
+    async function refreshPwaStatus() {
+        if (!("serviceWorker" in navigator)) {
+            pwaPill.textContent = "未支持";
+            pwaStatus.textContent = "当前浏览器不支持 Service Worker";
+            return;
+        }
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        const registered = registrations.length > 0;
+        pwaPill.textContent = registered ? "已注册" : "未注册";
+        pwaStatus.textContent = registered ? "已注册" : "未注册";
+    }
+
+    async function refreshOllamaStatus() {
+        const response = await fetch("/api/settings/ollama-status");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "状态读取失败");
+        ollamaModelText.textContent = data.model || window.SETTINGS_BOOTSTRAP.localRuntime?.model || "qwen2.5:3b";
+        ollamaStatusText.textContent = data.available
+            ? `🟢 Ollama 运行中（模型：${data.model}）`
+            : "🔴 Ollama 未运行，可执行 curl -fsSL https://ollama.ai/install.sh | sh";
+    }
+
+    async function refreshStorageInfo() {
+        const response = await fetch("/api/settings/storage-info");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "存储信息读取失败");
+        document.getElementById("settings-db-path").textContent = data.db_path || "-";
+        document.getElementById("settings-db-size").textContent = `${data.db_size_mb ?? 0} MB`;
+        document.getElementById("settings-chroma-path").textContent = data.chroma_path || "-";
+        document.getElementById("settings-chroma-count").textContent = String(data.chroma_entries ?? 0);
+    }
+
+    localToggle?.addEventListener("click", async () => {
+        llmStatus.textContent = "正在切换模式...";
+        try {
+            const response = await fetch("/api/settings/llm-mode", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ local_enabled: !localEnabled }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "切换失败");
+            localEnabled = data.current_mode === "local";
+            renderMode();
+            llmStatus.textContent = localEnabled ? "已切到本地优先模式。" : "已切到 API 优先模式。";
+            await refreshOllamaStatus();
+        } catch (error) {
+            llmStatus.textContent = error.message || "切换失败。";
+        }
+    });
+
+    document.getElementById("settings-clear-cache")?.addEventListener("click", async () => {
+        if (!window.confirm("确认清空 Chroma 向量缓存？SQLite 主库不会删除。")) return;
+        storageStatus.textContent = "正在清空缓存...";
+        try {
+            const response = await fetch("/api/settings/clear-cache", { method: "POST" });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "清空失败");
+            storageStatus.textContent = "向量缓存已清空。";
+            await refreshStorageInfo();
+        } catch (error) {
+            storageStatus.textContent = error.message || "清空失败。";
+        }
+    });
+
+    document.getElementById("settings-notify-form")?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        notifyStatus.textContent = "正在保存通知配置...";
+        const url = document.getElementById("settings-notify-url").value.trim();
+        const type = document.getElementById("settings-notify-type").value;
+        try {
+            const response = await fetch("/api/settings/notify-webhook", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url, type }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "保存失败");
+            renderNotify(data.configured, data.type);
+            notifyStatus.textContent = data.configured ? "通知配置已保存。" : "Webhook 已清空，通知已关闭。";
+            document.getElementById("settings-notify-url").value = "";
+        } catch (error) {
+            notifyStatus.textContent = error.message || "保存失败。";
+        }
+    });
+
+    document.getElementById("settings-test-notify")?.addEventListener("click", async () => {
+        notifyStatus.textContent = "正在发送测试消息...";
+        try {
+            const response = await fetch("/api/settings/test-notify", { method: "POST" });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "发送失败");
+            notifyStatus.textContent = data.message || (data.ok ? "测试消息已发送。" : "测试消息未发送。");
+        } catch (error) {
+            notifyStatus.textContent = error.message || "发送失败。";
+        }
+    });
+
+    document.getElementById("settings-clear-pwa-cache")?.addEventListener("click", async () => {
+        pwaCacheStatus.textContent = "正在刷新 PWA 缓存...";
+        try {
+            const response = await fetch("/api/settings/clear-pwa-cache", { method: "POST" });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "刷新失败");
+            if ("serviceWorker" in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map((registration) => registration.unregister()));
+            }
+            pwaCacheStatus.textContent = data.message || "缓存已刷新，请重新打开页面。";
+            await refreshPwaStatus();
+        } catch (error) {
+            pwaCacheStatus.textContent = error.message || "刷新失败。";
+        }
+    });
+
+    renderMode();
+    renderNotify(notifyConfigured, window.SETTINGS_BOOTSTRAP.notifyRuntime?.type);
+    refreshPwaStatus().catch(() => {
+        pwaPill.textContent = "未知";
+        pwaStatus.textContent = "状态检查失败";
+    });
+    refreshOllamaStatus().catch((error) => {
+        ollamaStatusText.textContent = "🔴 Ollama 状态读取失败";
+        llmStatus.textContent = error.message || "无法读取 Ollama 状态。";
+    });
+    refreshStorageInfo().catch((error) => {
+        storageStatus.textContent = error.message || "无法读取存储信息。";
+    });
+});
+</script>
+{% endblock %}

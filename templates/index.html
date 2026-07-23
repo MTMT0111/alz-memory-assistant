@@ -1,13 +1,26 @@
 {% extends "base.html" %}
 
 {% block page_content %}
+<div id="medication-reminder-banner" class="medication-reminder-banner" hidden></div>
+
+<header class="caregiver-dashboard-topbar">
+    <div class="caregiver-dashboard-brand">
+        <span>Alzheimer Family Care</span>
+        <strong>家庭照护 AI 系统</strong>
+    </div>
+    <div class="caregiver-dashboard-patient-meta">
+        <strong>{{ patient.name if patient is defined else profile.name or "患者" }}</strong>
+        <span id="dashboard-today-date">今日</span>
+    </div>
+</header>
+
 <section class="caregiver-page-header">
     <div>
         <p class="section-kicker">Caregiver Hub</p>
         <h1>家属照护工作台</h1>
         <p class="subtitle">这里集中处理照护侧需要的信息。患者仍然从对话页进入，家属则在这里维护档案、查看近期情况、安排提醒与关注趋势。</p>
     </div>
-    <a class="ghost-button caregiver-primary-link" href="/conversation">返回患者对话页</a>
+    <a class="ghost-button caregiver-primary-link" href="/conversation/{{ caregiver_patient_id }}">返回患者对话页</a>
 </section>
 
 <section class="caregiver-overview-grid">
@@ -44,10 +57,64 @@
             </div>
         </div>
     </article>
+
+    <article class="dashboard-card caregiver-card">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">今日情绪</p>
+                <h2>情绪状态</h2>
+            </div>
+        </div>
+        <div class="mood-overview-card">
+            <strong id="dashboard-mood-label">暂无数据</strong>
+            <span id="dashboard-mood-score">今日还没有对话</span>
+            <p id="dashboard-mood-evidence">完成一次患者对话后，系统会在后台更新情绪趋势。</p>
+        </div>
+    </article>
+
+    <article class="dashboard-card caregiver-card medication-status-card">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">今日用药</p>
+                <h2>用药状态</h2>
+            </div>
+        </div>
+        <div id="dashboard-medication-status" class="dashboard-medication-status status-pending">
+            <strong>⏳ 待确认</strong>
+            <span>还没有记录今日服药情况。</span>
+        </div>
+    </article>
+
+    <article class="dashboard-card caregiver-card risk-events-card caregiver-card-wide">
+        <div class="caregiver-card-head">
+            <div>
+                <p class="card-kicker">Risk Events</p>
+                <h2>今日风险事件</h2>
+            </div>
+        </div>
+        <div id="dashboard-risk-event-list" class="dashboard-risk-event-list"></div>
+    </article>
+</section>
+
+<section class="dashboard-card caregiver-card quick-actions-card">
+    <div class="caregiver-card-head">
+        <div>
+            <p class="card-kicker">Quick Actions</p>
+            <h2>快速操作</h2>
+        </div>
+    </div>
+    <div class="dashboard-quick-actions">
+        <a class="ghost-button" href="/conversation/{{ caregiver_patient_id }}">开始对话</a>
+        <a class="ghost-button" href="/reminiscence/{{ caregiver_patient_id }}">查看记忆</a>
+        <a class="ghost-button" href="/chat-history/{{ caregiver_patient_id }}">📋 查看对话历史</a>
+        <a class="ghost-button" href="/care-trend/{{ caregiver_patient_id }}">查看趋势</a>
+        <button id="dashboard-record-today-button" type="button" class="ghost-button">记录今日</button>
+    </div>
+    <p id="dashboard-record-today-status" class="summary-note-text" aria-live="polite">可在一天结束时手动沉淀照护摘要。</p>
 </section>
 
 <section class="caregiver-module-grid">
-    <a class="quick-link caregiver-module-link" href="/profile-editor">
+    <a class="quick-link caregiver-module-link" href="/patient/{{ caregiver_patient_id }}/settings">
         <strong>档案</strong>
         <span>维护基本信息、重要的人、熟悉经历、喜欢的事情和陪伴提醒。</span>
     </a>
@@ -67,9 +134,41 @@
         <strong>周摘要</strong>
         <span>查看本周互动情况、提醒安排、异常类型和可承接话题。</span>
     </a>
+    <a class="quick-link caregiver-module-link" href="/care-trend/{{ caregiver_patient_id }}">
+        <strong>📅 查看跨日趋势</strong>
+        <span>记录每天照护摘要，观察最近 14 天用药、风险和情绪趋势。</span>
+    </a>
     <a class="quick-link caregiver-module-link" href="/llm-eval">
         <strong>LLM Eval</strong>
         <span>测试真实或 Mock LLM 在限制词、患者状态和照护场景下的回复质量。</span>
     </a>
+</section>
+
+<section class="dashboard-card caregiver-card medication-settings-card">
+    <div class="caregiver-card-head">
+        <div>
+            <p class="card-kicker">Medication Schedule</p>
+            <h2>用药提醒设置</h2>
+        </div>
+    </div>
+    <div id="medication-schedule-list" class="care-record-list"></div>
+    <div class="reminder-form-grid medication-schedule-form">
+        <label>
+            <span>药品名称</span>
+            <input id="medication-name-input" type="text" placeholder="例如：降压药">
+        </label>
+        <label>
+            <span>提醒时间</span>
+            <input id="medication-time-input" type="time">
+        </label>
+        <label>
+            <span>剂量</span>
+            <input id="medication-dose-input" type="text" placeholder="例如：1片">
+        </label>
+        <div class="reminder-form-actions">
+            <button id="add-medication-schedule-button" type="button">添加提醒</button>
+        </div>
+    </div>
+    <p id="medication-schedule-status" class="summary-note-text">每 60 秒检查一次到点提醒，已服药后今日不再弹出。</p>
 </section>
 {% endblock %}

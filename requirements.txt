@@ -4,3 +4,4 @@ pydantic
 jinja2
 openai
 python-dotenv
+itsdangerous

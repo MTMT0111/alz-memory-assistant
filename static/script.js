@@ -8,6 +8,7 @@ const supportMeta = bootstrap.supportMeta || {
 const activePage = document.body?.dataset.page || bootstrap.activePage || "dashboard";
 
 let currentProfile = bootstrap.profile ? { ...bootstrap.profile } : {};
+let currentSelectedPatient = bootstrap.selectedPatient ? { ...bootstrap.selectedPatient } : {};
 let currentUserId = currentProfile.id || null;
 let currentLogs = Array.isArray(bootstrap.recentLogs) ? [...bootstrap.recentLogs] : [];
 let currentMemoryDigest = bootstrap.memoryDigest ? { ...bootstrap.memoryDigest } : {};
@@ -16,19 +17,40 @@ let currentEventLogs = Array.isArray(bootstrap.eventLogs) ? [...bootstrap.eventL
 let currentCaregiverLinks = Array.isArray(bootstrap.caregiverLinks) ? [...bootstrap.caregiverLinks] : [];
 let currentCareDigest = bootstrap.careDigest ? { ...bootstrap.careDigest } : {};
 let currentCaregiverPatientId = bootstrap.caregiverPatientId || "demo_patient_001";
+const chatSessionStorageKey = `alz-chat-session-${currentCaregiverPatientId}`;
+let currentChatSessionId = sessionStorage.getItem(chatSessionStorageKey) || `${currentCaregiverPatientId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+sessionStorage.setItem(chatSessionStorageKey, currentChatSessionId);
 let currentCaregiverEvents = Array.isArray(bootstrap.caregiverEvents) ? [...bootstrap.caregiverEvents] : [];
+let currentRiskEvents = [];
 let currentCaregiverInsight = bootstrap.caregiverInsight ? { ...bootstrap.caregiverInsight } : {};
 let currentDailyCareSummary = bootstrap.dailyCareSummary ? { ...bootstrap.dailyCareSummary } : {};
+let currentDailyMoodSummary = {};
+let currentMedicationSchedules = [];
 let currentFamiliarMaterials = Array.isArray(bootstrap.familiarMaterials) ? [...bootstrap.familiarMaterials] : [];
 let currentFamiliarMaterialStatus = bootstrap.familiarMaterialStatus ? { ...bootstrap.familiarMaterialStatus } : {};
 let currentMemoryCandidates = Array.isArray(bootstrap.memoryCandidates) ? [...bootstrap.memoryCandidates] : [];
 let openMemoryCandidateEditorId = null;
 const memoryCandidateDrafts = new Map();
 const reminiscenceEscortIds = new Set();
+const reminiscenceCategories = ["家人", "往事", "爱好", "其他"];
+let currentReminiscenceMemoriesByCategory = { "家人": [], "往事": [], "爱好": [], "其他": [] };
+let currentReminiscenceSearchResults = [];
+let currentReminiscenceAiTopics = [];
+let currentSelectedReminiscenceMemoryId = null;
+let reminiscenceSearchTimer = null;
 let currentLastChatDiagnostics = null;
 let currentLlmStatus = null;
 let currentTestResults = null;
 let editingReminderId = null;
+let medicationReminderPollTimer = null;
+
+function legacyProfileUserId() {
+    const value = String(currentUserId || "").trim();
+    return /^\d+$/.test(value) ? value : "";
+}
+let activeMedicationReminder = null;
+const medicationSnoozeUntilById = new Map();
+const shownMedicationReminderIds = new Set();
 const debugMode = Boolean(bootstrap.debugMode) || new URLSearchParams(window.location.search).get("debug") === "1";
 
 const sendButtonDefaultText = "发送";
@@ -95,6 +117,11 @@ const materialTypeLabels = {
     daily_object: "日常物品",
     sensitive_memory: "敏感记忆"
 };
+
+let materialVoiceRecorder = null;
+let materialVoiceChunks = [];
+let materialVoiceStopTimer = null;
+let materialVoiceRecordingId = null;
 
 const chatHistoryCategoryLabels = {
     normal: "普通聊天",
@@ -200,6 +227,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         hydrateSeedMessage();
     }
     await hydratePageState();
+    if (isPage("dashboard")) {
+        startMedicationReminderPolling();
+    }
 });
 
 
@@ -298,6 +328,11 @@ function bindPageEvents() {
         bindReminderCenter();
     }
 
+    if (isPage("dashboard")) {
+        bindMedicationScheduleSettings();
+        element("dashboard-record-today-button")?.addEventListener("click", recordTodayFromDashboard);
+    }
+
     if (isPage("safety")) {
         const wanderingButton = element("wandering-event-button");
         if (wanderingButton) {
@@ -345,6 +380,7 @@ function renderAll() {
     const profile = getCurrentProfileSnapshot();
 
     if (isPage("conversation")) {
+        renderConversationPatientHeader(profile);
         renderConversationTopStatus();
         updateConversationLayout();
         updateComposerNote(defaultConversationComposerNote);
@@ -362,6 +398,9 @@ function renderAll() {
     if (isPage("dashboard")) {
         renderSummaryPanels(profile, currentLogs);
         renderDashboardProfileCard(profile);
+        renderDashboardMoodCard();
+        renderDashboardCarePolish();
+        renderMedicationScheduleSettings();
         return;
     }
 
@@ -426,8 +465,15 @@ async function hydratePageState() {
     await loadProfile();
     await loadRecentChatLogs();
     await loadCareData();
+    if (isPage("dashboard")) {
+        await loadMedicationSchedules();
+    }
     if (isPage("materials") || isPage("analysis") || isPage("chat_history") || isPage("reminiscence")) {
         await loadFamiliarMaterials();
+    }
+    if (isPage("reminiscence")) {
+        await loadReminiscenceMemories();
+        await loadReminiscenceAiTopics();
     }
     if (isPage("chat_history") || isPage("analysis")) {
         await loadMemoryCandidates();
@@ -1323,7 +1369,14 @@ function renderDashboardProfileCard(profile) {
         return;
     }
 
-    const rows = [
+    const patient = currentSelectedPatient && currentSelectedPatient.id ? currentSelectedPatient : null;
+    const rows = patient ? [
+        ["姓名", patient.name || "尚未填写"],
+        ["年龄", patient.age ? `${patient.age} 岁` : "尚未填写"],
+        ["与照护者关系", patient.relation || "尚未填写"],
+        ["病情阶段", patient.stage || "尚未填写"],
+        ["备注", patient.notes ? shortText(patient.notes, 38) : "尚未填写"]
+    ] : [
         ["常用称呼", profile.name || "尚未填写"],
         ["熟悉城市", profile.hometown || "尚未填写"],
         ["重要的人", profile.family_info ? shortText(profile.family_info, 38) : "尚未填写"],
@@ -1334,6 +1387,12 @@ function renderDashboardProfileCard(profile) {
     container.innerHTML = rows.map(([label, value]) => (
         `<div class="soft-list-row"><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`
     )).join("");
+}
+
+
+function renderConversationPatientHeader(profile) {
+    setTextIfPresent("conversation-patient-name", currentSelectedPatient.name || profile.name || "患者");
+    setTextIfPresent("conversation-today-date", formatConversationDate());
 }
 
 
@@ -1384,8 +1443,9 @@ function fillProfileForm(profile) {
 
 async function loadProfile() {
     const params = new URLSearchParams();
-    if (currentUserId) {
-        params.set("user_id", String(currentUserId));
+    const legacyId = legacyProfileUserId();
+    if (legacyId) {
+        params.set("user_id", legacyId);
     }
 
     const query = params.toString();
@@ -1415,8 +1475,9 @@ async function loadProfile() {
 async function loadRecentChatLogs() {
     const params = new URLSearchParams();
 
-    if (currentUserId) {
-        params.set("user_id", String(currentUserId));
+    const legacyId = legacyProfileUserId();
+    if (legacyId) {
+        params.set("user_id", legacyId);
     }
     params.set("mode", getCurrentMode());
     params.set("limit", isPage("chat_history") ? "50" : "10");
@@ -1444,20 +1505,23 @@ async function loadRecentChatLogs() {
 
 
 async function loadCareData() {
-    if (!currentUserId) {
+    const legacyId = legacyProfileUserId();
+    if (!currentUserId && !currentCaregiverPatientId) {
         return;
     }
 
-    const params = new URLSearchParams({ user_profile_id: String(currentUserId) });
+    const params = new URLSearchParams({ user_profile_id: legacyId || "0" });
 
     try {
-        const [reminderResponse, eventResponse, caregiverResponse, insightResponse, caregiverEventResponse, dailyCareResponse] = await Promise.all([
+        const [reminderResponse, eventResponse, caregiverResponse, insightResponse, caregiverEventResponse, dailyCareResponse, dailyMoodResponse, riskEventResponse] = await Promise.all([
             fetch(`/reminders?${params.toString()}`),
             fetch(`/event_logs?${params.toString()}`),
             fetch(`/caregivers?${params.toString()}`),
             fetch(`/api/caregiver/${encodeURIComponent(currentCaregiverPatientId)}/summary`),
             fetch(`/api/caregiver/${encodeURIComponent(currentCaregiverPatientId)}/events`),
-            fetch(`/api/daily-care/${encodeURIComponent(currentCaregiverPatientId)}/today`)
+            fetch(`/api/daily-care/${encodeURIComponent(currentCaregiverPatientId)}/today`),
+            fetch(`/api/daily-summary/${encodeURIComponent(currentCaregiverPatientId)}?days=1`),
+            fetch(`/api/risk-events/${encodeURIComponent(currentCaregiverPatientId)}?days=1&unresolved_only=false`)
         ]);
 
         const reminderData = await reminderResponse.json();
@@ -1466,6 +1530,8 @@ async function loadCareData() {
         const insightData = await insightResponse.json();
         const caregiverEventData = await caregiverEventResponse.json();
         const dailyCareData = await dailyCareResponse.json();
+        const dailyMoodData = await dailyMoodResponse.json();
+        const riskEventData = await riskEventResponse.json();
 
         if (reminderResponse.ok) {
             currentReminders = Array.isArray(reminderData.reminders) ? [...reminderData.reminders] : [];
@@ -1485,6 +1551,14 @@ async function loadCareData() {
         if (dailyCareResponse.ok) {
             currentDailyCareSummary = { ...dailyCareData };
         }
+        if (dailyMoodResponse.ok && Array.isArray(dailyMoodData) && dailyMoodData.length) {
+            currentDailyMoodSummary = { ...dailyMoodData[dailyMoodData.length - 1] };
+        } else {
+            currentDailyMoodSummary = {};
+        }
+        if (riskEventResponse.ok) {
+            currentRiskEvents = Array.isArray(riskEventData) ? [...riskEventData] : [];
+        }
 
         renderAll();
     } catch (error) {
@@ -1494,6 +1568,8 @@ async function loadCareData() {
         currentCaregiverEvents = Array.isArray(bootstrap.caregiverEvents) ? [...bootstrap.caregiverEvents] : [];
         currentCaregiverInsight = bootstrap.caregiverInsight ? { ...bootstrap.caregiverInsight } : {};
         currentDailyCareSummary = bootstrap.dailyCareSummary ? { ...bootstrap.dailyCareSummary } : {};
+        currentDailyMoodSummary = {};
+        currentRiskEvents = [];
         renderAll();
         console.error(error);
     }
@@ -1665,7 +1741,8 @@ function renderCaregiverInsight() {
         : currentCaregiverEvents;
     const actions = Array.isArray(insight.suggested_actions) ? insight.suggested_actions : [];
 
-    summaryNode.textContent = insight.today_summary || "李奶奶今天重复询问女儿小雨回家时间 2 次，出现 1 次不安表达，询问过用药状态。";
+    const patientName = currentSelectedPatient.name || currentProfile.name || "患者";
+    summaryNode.textContent = insight.today_summary || `${patientName}今天暂无新的照护摘要，完成对话或记录事件后会在这里更新。`;
 
     const riskNode = element("caregiver-insight-risk-level");
     if (riskNode) {
@@ -1792,6 +1869,522 @@ function renderDailyCareLoop() {
             ? actions.slice(0, 3).map((action) => `<div class="analysis-mini-item">${escapeHtml(action)}</div>`).join("")
             : `<div class="analysis-mini-item">暂无异常，建议继续保持日常提醒和晚间联系。</div>`;
     }
+}
+
+
+function renderDashboardMoodCard() {
+    const mood = currentDailyMoodSummary || {};
+    const labelNode = element("dashboard-mood-label");
+    const scoreNode = element("dashboard-mood-score");
+    const evidenceNode = element("dashboard-mood-evidence");
+    const moodScore = mood.mood_score === null || mood.mood_score === undefined ? null : Number(mood.mood_score);
+    const today = new Date();
+    const todayText = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+    if (!mood || mood.date !== todayText || moodScore === null || Number.isNaN(moodScore)) {
+        setTextIfPresent("dashboard-mood-label", "暂无数据");
+        setTextIfPresent("dashboard-mood-score", "今日还没有对话");
+        setTextIfPresent("dashboard-mood-evidence", "完成一次患者对话后，系统会在后台更新情绪趋势。");
+        return;
+    }
+
+    if (labelNode) {
+        labelNode.textContent = mood.mood_label || "未知";
+    }
+    if (scoreNode) {
+        scoreNode.textContent = `${moodScore.toFixed(1)}/5`;
+    }
+    if (evidenceNode) {
+        evidenceNode.textContent = mood.mood_evidence || mood.evidence || mood.summary_text || "暂无情绪判断依据。";
+    }
+}
+
+
+function renderDashboardCarePolish() {
+    const todayDate = element("dashboard-today-date");
+    if (todayDate) {
+        todayDate.textContent = formatConversationDate();
+    }
+    renderDashboardMedicationStatus();
+    renderDashboardRiskEvents();
+}
+
+
+function renderDashboardMedicationStatus() {
+    const node = element("dashboard-medication-status");
+    if (!node) {
+        return;
+    }
+    const today = new Date();
+    const todayText = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const dailySummaryIsToday = currentDailyMoodSummary?.date === todayText;
+    const medicationTaken = dailySummaryIsToday
+        ? currentDailyMoodSummary?.medication_taken
+        : currentDailyCareSummary?.medication_taken;
+    const medicationTime = dailySummaryIsToday
+        ? currentDailyMoodSummary?.medication_time
+        : currentDailyCareSummary?.medication_time;
+    let statusClass = "status-pending";
+    let title = "⏳ 待确认";
+    let detail = "还没有记录今日服药情况。";
+    let action = `<button id="dashboard-mark-medication-taken-button" type="button" class="ghost-button dashboard-medication-action">标记已服药</button>`;
+    if (medicationTaken === 1 || medicationTaken === true) {
+        statusClass = "status-taken";
+        title = "✅ 已服药";
+        detail = medicationTime ? `实际服药时间 ${medicationTime}` : "今日已确认服药。";
+        action = `<button type="button" class="ghost-button dashboard-medication-action" disabled>已记录</button>`;
+    }
+    node.className = `dashboard-medication-status ${statusClass}`;
+    node.innerHTML = `<strong>${title}</strong><span>${escapeHtml(detail)}</span>${action}`;
+    element("dashboard-mark-medication-taken-button")?.addEventListener("click", markDashboardMedicationTaken);
+}
+
+
+function renderDashboardRiskEvents() {
+    const container = element("dashboard-risk-event-list");
+    if (!container) {
+        return;
+    }
+    const events = (Array.isArray(currentRiskEvents) ? currentRiskEvents : []).slice(0, 8);
+    renderHighRiskBanner(events);
+    if (!events.length) {
+        container.innerHTML = `<div class="log-empty dashboard-risk-empty"><strong>今日无风险事件 ✅</strong><span>如果患者出现外出、焦虑或用药不确定，会在这里聚合展示。</span></div>`;
+        return;
+    }
+    container.innerHTML = events.map((event) => {
+        const riskLevel = String(event.risk_level || "低");
+        const severity = riskLevel === "高" ? "high" : riskLevel === "中" ? "medium" : "low";
+        const resolved = Number(event.is_resolved || 0) === 1;
+        const timeText = formatDisplayTime(event.created_at || "");
+        return `
+            <article class="dashboard-risk-event ${severity === "high" ? "high-risk" : ""} ${resolved ? "resolved" : ""}">
+                <div>
+                    <time>${escapeHtml(timeText || "今日")}</time>
+                    <strong>${escapeHtml(event.risk_type || "照护风险")}</strong>
+                    <p><b>触发原文：</b>${escapeHtml(shortText(event.evidence || "未记录", 30))}</p>
+                    <p><b>建议：</b>${escapeHtml(event.suggestion || "建议照护者稍后确认患者状态。")}</p>
+                    ${resolved ? `<span class="dashboard-risk-resolved">已处理</span>` : `<button type="button" class="ghost-button dashboard-risk-resolve" data-event-id="${escapeHtml(event.id)}">✅ 标记已处理</button>`}
+                </div>
+                <span class="severity-badge severity-${escapeHtml(severity)}">${escapeHtml(riskLevel)}</span>
+            </article>
+        `;
+    }).join("");
+    container.querySelectorAll(".dashboard-risk-resolve").forEach((button) => {
+        button.addEventListener("click", () => resolveRiskEvent(button.dataset.eventId || "", button));
+    });
+}
+
+
+function renderHighRiskBanner(events = currentRiskEvents) {
+    const existing = element("dashboard-high-risk-banner");
+    if (existing) {
+        existing.remove();
+    }
+    const highRisk = (Array.isArray(events) ? events : []).find((event) => event.risk_level === "高" && Number(event.is_resolved || 0) !== 1);
+    if (!highRisk || !isPage("dashboard")) {
+        return;
+    }
+    const banner = document.createElement("div");
+    banner.id = "dashboard-high-risk-banner";
+    banner.className = "dashboard-high-risk-banner";
+    banner.innerHTML = `
+        <strong>⚠️ 检测到高风险信号：${escapeHtml(highRisk.risk_type || "照护风险")} — ${escapeHtml(highRisk.suggestion || "请尽快确认患者状态。")}</strong>
+        <button type="button" aria-label="关闭高风险提醒">关闭</button>
+    `;
+    banner.querySelector("button")?.addEventListener("click", () => banner.remove());
+    document.body.appendChild(banner);
+}
+
+
+async function resolveRiskEvent(eventId, sourceButton = null) {
+    if (!eventId) {
+        return;
+    }
+    try {
+        if (sourceButton) {
+            sourceButton.disabled = true;
+            sourceButton.textContent = "处理中";
+        }
+        const response = await fetch(`/api/risk-events/${encodeURIComponent(eventId)}/resolve`, { method: "POST" });
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+            throw new Error(data.detail || "风险事件处理失败");
+        }
+        await loadCareData();
+    } catch (error) {
+        if (sourceButton) {
+            sourceButton.disabled = false;
+            sourceButton.textContent = "✅ 标记已处理";
+        }
+        console.error(error);
+    }
+}
+
+
+async function recordTodayFromDashboard() {
+    const button = element("dashboard-record-today-button");
+    if (!currentCaregiverPatientId || !button) {
+        return;
+    }
+    const originalText = button.textContent;
+    try {
+        button.disabled = true;
+        button.textContent = "记录中";
+        const response = await fetch(`/api/daily-summary/${encodeURIComponent(currentCaregiverPatientId)}`, {
+            method: "POST"
+        });
+        if (!response.ok) {
+            throw new Error("record failed");
+        }
+        setTextIfPresent("dashboard-record-today-status", "✅ 今日记录已保存");
+        await loadCareData();
+    } catch (error) {
+        setTextIfPresent("dashboard-record-today-status", "记录今日暂时失败，请稍后再试。");
+    } finally {
+        button.disabled = false;
+        button.textContent = originalText || "记录今日";
+    }
+}
+
+
+async function markDashboardMedicationTaken() {
+    const button = element("dashboard-mark-medication-taken-button");
+    if (!currentCaregiverPatientId || !button) {
+        return;
+    }
+    try {
+        button.disabled = true;
+        button.textContent = "记录中";
+        const response = await fetch(`/api/medication-taken/${encodeURIComponent(currentCaregiverPatientId)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ schedule_id: 0 })
+        });
+        const data = await response.json();
+        if (!response.ok || data.ok !== true) {
+            throw new Error("medication taken failed");
+        }
+        const now = new Date();
+        const timeText = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+        const dateText = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        currentDailyMoodSummary = {
+            ...currentDailyMoodSummary,
+            date: dateText,
+            medication_taken: 1,
+            medication_time: timeText
+        };
+        currentDailyCareSummary = {
+            ...currentDailyCareSummary,
+            medication_taken: 1,
+            medication_time: timeText
+        };
+        renderDashboardMedicationStatus();
+        await loadCareData();
+    } catch (error) {
+        button.disabled = false;
+        button.textContent = "标记已服药";
+    }
+}
+
+
+function normalizeMedicationSchedulePayload(data) {
+    if (Array.isArray(data)) {
+        return {
+            reminders: data,
+            schedules: data
+        };
+    }
+    return {
+        reminders: Array.isArray(data?.reminders) ? data.reminders : [],
+        schedules: Array.isArray(data?.schedules) ? data.schedules : (Array.isArray(data?.reminders) ? data.reminders : [])
+    };
+}
+
+
+async function loadMedicationSchedules(options = {}) {
+    if (!currentCaregiverPatientId) {
+        return [];
+    }
+    try {
+        const response = await fetch(`/api/reminders/${encodeURIComponent(currentCaregiverPatientId)}`);
+        if (!response.ok) {
+            return null;
+        }
+        const data = normalizeMedicationSchedulePayload(await response.json());
+        currentMedicationSchedules = [...data.schedules];
+        if (options.render) {
+            renderMedicationScheduleSettings();
+        }
+        return data.reminders;
+    } catch (error) {
+        if (!options.silent) {
+            setTextIfPresent("medication-schedule-status", "用药提醒暂时加载失败，请稍后再试。");
+        }
+        return null;
+    }
+}
+
+
+function bindMedicationScheduleSettings() {
+    const addButton = element("add-medication-schedule-button");
+    if (addButton) {
+        addButton.addEventListener("click", addMedicationSchedule);
+    }
+}
+
+
+function renderMedicationScheduleSettings() {
+    const container = element("medication-schedule-list");
+    if (!container) {
+        return;
+    }
+    if (!currentMedicationSchedules.length) {
+        container.innerHTML = `<div class="care-record-card"><div><strong>还没有用药提醒</strong><span>添加药品名称、时间和剂量后，到点会在工作台顶部弹出提醒。</span></div></div>`;
+        return;
+    }
+
+    container.innerHTML = currentMedicationSchedules.map((schedule) => {
+        const enabled = Boolean(schedule.enabled);
+        const doseText = schedule.dose ? ` · ${escapeHtml(schedule.dose)}` : "";
+        const notifiedText = schedule.notified ? "今日已记录服药" : "今日待提醒";
+        return `
+            <div class="care-record-card">
+                <div>
+                    <strong>${escapeHtml(schedule.remind_time || "--:--")} · ${escapeHtml(schedule.medication_name || "用药提醒")}</strong>
+                    <span>${enabled ? "已启用" : "已暂停"}${doseText}</span>
+                    <p>${notifiedText}</p>
+                </div>
+                <div class="medication-schedule-card-actions">
+                    <button
+                        type="button"
+                        class="medication-schedule-toggle"
+                        data-schedule-id="${schedule.id}"
+                        data-enabled="${enabled ? "true" : "false"}"
+                    >${enabled ? "暂停" : "启用"}</button>
+                </div>
+            </div>
+        `;
+    }).join("");
+
+    container.querySelectorAll(".medication-schedule-toggle").forEach((button) => {
+        button.addEventListener("click", () => {
+            const scheduleId = Number(button.dataset.scheduleId);
+            const nextEnabled = button.dataset.enabled !== "true";
+            toggleMedicationSchedule(scheduleId, nextEnabled);
+        });
+    });
+}
+
+
+async function addMedicationSchedule() {
+    const nameInput = element("medication-name-input");
+    const timeInput = element("medication-time-input");
+    const doseInput = element("medication-dose-input");
+    const addButton = element("add-medication-schedule-button");
+    const payload = {
+        medication_name: nameInput?.value.trim() || "",
+        remind_time: timeInput?.value || "",
+        dose: doseInput?.value.trim() || ""
+    };
+    if (!payload.medication_name || !payload.remind_time) {
+        setTextIfPresent("medication-schedule-status", "请填写药品名称和提醒时间。");
+        return;
+    }
+
+    try {
+        if (addButton) {
+            addButton.disabled = true;
+            addButton.textContent = "添加中";
+        }
+        const response = await fetch(`/api/reminders/${encodeURIComponent(currentCaregiverPatientId)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error("schedule save failed");
+        }
+        [nameInput, timeInput, doseInput].forEach((node) => {
+            if (node) {
+                node.value = "";
+            }
+        });
+        setTextIfPresent("medication-schedule-status", data.id ? "用药提醒已添加。" : "用药提醒已保存。");
+        await loadMedicationSchedules({ render: true, silent: false });
+    } catch (error) {
+        setTextIfPresent("medication-schedule-status", "用药提醒暂时没有保存成功，请稍后再试。");
+    } finally {
+        if (addButton) {
+            addButton.disabled = false;
+            addButton.textContent = "添加提醒";
+        }
+    }
+}
+
+
+async function toggleMedicationSchedule(scheduleId, enabled) {
+    if (!scheduleId) {
+        return;
+    }
+    try {
+        const response = await fetch(`/api/reminders/${encodeURIComponent(scheduleId)}/toggle`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled })
+        });
+        if (!response.ok) {
+            throw new Error("schedule toggle failed");
+        }
+        currentMedicationSchedules = currentMedicationSchedules.map((schedule) => (
+            Number(schedule.id) === Number(scheduleId)
+                ? { ...schedule, enabled }
+                : schedule
+        ));
+        setTextIfPresent("medication-schedule-status", enabled ? "提醒已启用。" : "提醒已暂停。");
+        renderMedicationScheduleSettings();
+        await loadMedicationSchedules({ render: true });
+    } catch (error) {
+        setTextIfPresent("medication-schedule-status", "提醒状态暂时没有更新成功。");
+    }
+}
+
+
+function startMedicationReminderPolling() {
+    if (medicationReminderPollTimer) {
+        window.clearInterval(medicationReminderPollTimer);
+    }
+    pollMedicationReminders();
+    medicationReminderPollTimer = window.setInterval(pollMedicationReminders, 60 * 1000);
+}
+
+
+async function pollMedicationReminders() {
+    const reminders = await loadMedicationSchedules({ render: true, silent: true });
+    if (reminders === null) {
+        return;
+    }
+    if (!Array.isArray(reminders) || !reminders.length) {
+        hideMedicationReminderBanner();
+        return;
+    }
+    if (reminders.every((item) => item.notified)) {
+        hideMedicationReminderBanner();
+        return;
+    }
+    const dueReminder = reminders.find((item) => isMedicationReminderDue(item));
+    if (dueReminder) {
+        showMedicationReminderBanner(dueReminder);
+    }
+}
+
+
+function minutesFromTimeText(timeText) {
+    const [hourText, minuteText] = String(timeText || "").split(":");
+    const hours = Number(hourText);
+    const minutes = Number(minuteText);
+    if (Number.isNaN(hours) || Number.isNaN(minutes)) {
+        return null;
+    }
+    return hours * 60 + minutes;
+}
+
+
+function isMedicationReminderDue(reminder) {
+    if (!reminder || reminder.notified || reminder.enabled === false) {
+        return false;
+    }
+    const scheduleId = Number(reminder.id);
+    const snoozeUntil = medicationSnoozeUntilById.get(scheduleId);
+    if (snoozeUntil) {
+        return Date.now() >= snoozeUntil;
+    }
+    if (shownMedicationReminderIds.has(scheduleId)) {
+        return false;
+    }
+
+    const reminderMinutes = minutesFromTimeText(reminder.remind_time);
+    if (reminderMinutes === null) {
+        return false;
+    }
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const diff = Math.abs(nowMinutes - reminderMinutes);
+    return Math.min(diff, 24 * 60 - diff) <= 5;
+}
+
+
+function showMedicationReminderBanner(reminder) {
+    const banner = element("medication-reminder-banner");
+    if (!banner) {
+        return;
+    }
+    if (activeMedicationReminder && Number(activeMedicationReminder.id) === Number(reminder.id) && !banner.hidden) {
+        return;
+    }
+    activeMedicationReminder = { ...reminder };
+    shownMedicationReminderIds.add(Number(reminder.id));
+    const doseText = reminder.dose ? `（${escapeHtml(reminder.dose)}）` : "";
+    banner.innerHTML = `
+        <strong>💊 ${escapeHtml(reminder.medication_name || "用药")} 用药时间到了${doseText}</strong>
+        <div class="medication-reminder-banner-actions">
+            <button type="button" id="medication-taken-button">✅ 已服药</button>
+            <button type="button" id="medication-snooze-button">⏰ 稍后提醒（30分钟）</button>
+        </div>
+    `;
+    banner.hidden = false;
+    element("medication-taken-button")?.addEventListener("click", markMedicationTaken);
+    element("medication-snooze-button")?.addEventListener("click", snoozeMedicationReminder);
+}
+
+
+function hideMedicationReminderBanner() {
+    const banner = element("medication-reminder-banner");
+    if (banner) {
+        banner.hidden = true;
+        banner.innerHTML = "";
+    }
+    activeMedicationReminder = null;
+}
+
+
+async function markMedicationTaken() {
+    if (!currentCaregiverPatientId) {
+        return;
+    }
+    try {
+        const response = await fetch(`/api/medication-taken/${encodeURIComponent(currentCaregiverPatientId)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                schedule_id: activeMedicationReminder?.id || 0
+            })
+        });
+        if (!response.ok) {
+            return;
+        }
+        currentMedicationSchedules = currentMedicationSchedules.map((schedule) => ({
+            ...schedule,
+            notified: true
+        }));
+        medicationSnoozeUntilById.clear();
+        shownMedicationReminderIds.clear();
+        hideMedicationReminderBanner();
+        renderMedicationScheduleSettings();
+        await loadCareData();
+    } catch (error) {
+        return;
+    }
+}
+
+
+function snoozeMedicationReminder() {
+    if (activeMedicationReminder?.id) {
+        const scheduleId = Number(activeMedicationReminder.id);
+        medicationSnoozeUntilById.set(scheduleId, Date.now() + 30 * 60 * 1000);
+        shownMedicationReminderIds.delete(scheduleId);
+    }
+    hideMedicationReminderBanner();
 }
 
 
@@ -2042,15 +2635,352 @@ function setReminiscenceStatus(message, kind = "neutral") {
 }
 
 
+function normalizeReminiscenceCategory(category) {
+    return reminiscenceCategories.includes(category) ? category : "其他";
+}
+
+
+function normalizeReminiscenceMemory(memory, category = "其他") {
+    const metadata = memory?.metadata && typeof memory.metadata === "object" ? memory.metadata : {};
+    return {
+        memory_id: String(memory?.memory_id || memory?.id || ""),
+        text: String(memory?.text || memory?.document || ""),
+        category: normalizeReminiscenceCategory(memory?.category || metadata.category || category),
+        score: typeof memory?.score === "number" ? memory.score : null,
+        approved_at: String(memory?.approved_at || metadata.approved_at || metadata.updated_at || metadata.created_at || ""),
+        source: String(memory?.source || metadata.source || metadata.source_message || metadata.conversation_id || ""),
+        metadata,
+    };
+}
+
+
+function normalizeReminiscenceGroups(data) {
+    const groups = {};
+    reminiscenceCategories.forEach((category) => {
+        const items = Array.isArray(data?.[category]) ? data[category] : [];
+        groups[category] = items.map((item) => normalizeReminiscenceMemory(item, category)).filter((item) => item.memory_id && item.text);
+    });
+    return groups;
+}
+
+
+function allReminiscenceMemories() {
+    return reminiscenceCategories.flatMap((category) => currentReminiscenceMemoriesByCategory[category] || []);
+}
+
+
+function findReminiscenceMemory(memoryId) {
+    const id = String(memoryId || "");
+    return allReminiscenceMemories().find((memory) => String(memory.memory_id) === id)
+        || currentReminiscenceSearchResults.find((memory) => String(memory.memory_id) === id)
+        || currentReminiscenceAiTopics.find((memory) => String(memory.memory_id) === id)
+        || null;
+}
+
+
+function selectDefaultReminiscenceMemory() {
+    if (currentSelectedReminiscenceMemoryId && findReminiscenceMemory(currentSelectedReminiscenceMemoryId)) {
+        return;
+    }
+    const firstMemory = allReminiscenceMemories()[0] || currentReminiscenceAiTopics[0] || currentReminiscenceSearchResults[0] || null;
+    currentSelectedReminiscenceMemoryId = firstMemory?.memory_id || null;
+}
+
+
+function getReminiscencePatientId() {
+    return element("reminiscence-memory-search")?.closest(".reminiscence-memory-shell")?.dataset.patientId
+        || currentCaregiverPatientId
+        || "demo_patient_001";
+}
+
+
+async function loadReminiscenceMemories() {
+    const patientId = getReminiscencePatientId();
+    try {
+        const response = await fetch(`/api/memories/${encodeURIComponent(patientId)}/by-category`);
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || "记忆分类加载失败");
+        }
+        currentReminiscenceMemoriesByCategory = normalizeReminiscenceGroups(data);
+        selectDefaultReminiscenceMemory();
+        setReminiscenceStatus("", "neutral");
+        renderAll();
+    } catch (error) {
+        currentReminiscenceMemoriesByCategory = normalizeReminiscenceGroups({});
+        setReminiscenceStatus("已确认记忆暂时无法加载，请确认向量库已同步。", "warning");
+        renderAll();
+        console.error(error);
+    }
+}
+
+
+async function loadReminiscenceAiTopics() {
+    const patientId = getReminiscencePatientId();
+    try {
+        const response = await fetch(`/api/memories/search?query=${encodeURIComponent("今天聊什么")}&patient_id=${encodeURIComponent(patientId)}&top_k=3`);
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || "推荐话题加载失败");
+        }
+        currentReminiscenceAiTopics = (Array.isArray(data.results) ? data.results : [])
+            .map((item) => normalizeReminiscenceMemory(item, "其他"))
+            .filter((item) => item.memory_id && item.text)
+            .slice(0, 3);
+        selectDefaultReminiscenceMemory();
+        renderAll();
+    } catch (error) {
+        currentReminiscenceAiTopics = [];
+        renderAll();
+        console.error(error);
+    }
+}
+
+
+async function searchReminiscenceMemories(query) {
+    const cleanQuery = String(query || "").trim();
+    if (!cleanQuery) {
+        currentReminiscenceSearchResults = [];
+        renderReminiscencePage();
+        return;
+    }
+    const patientId = getReminiscencePatientId();
+    try {
+        const response = await fetch(`/api/memories/search?query=${encodeURIComponent(cleanQuery)}&patient_id=${encodeURIComponent(patientId)}&top_k=12`);
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.detail || "搜索失败");
+        }
+        currentReminiscenceSearchResults = (Array.isArray(data.results) ? data.results : [])
+            .map((item) => {
+                const existing = findReminiscenceMemory(item.memory_id);
+                return existing ? { ...existing, score: typeof item.score === "number" ? item.score : existing.score } : normalizeReminiscenceMemory(item, "其他");
+            })
+            .filter((item) => item.memory_id && item.text);
+        if (currentReminiscenceSearchResults.length) {
+            currentSelectedReminiscenceMemoryId = currentReminiscenceSearchResults[0].memory_id;
+        }
+        renderReminiscencePage();
+    } catch (error) {
+        currentReminiscenceSearchResults = [];
+        setReminiscenceStatus("搜索暂时不可用，请稍后再试。", "warning");
+        renderReminiscencePage();
+        console.error(error);
+    }
+}
+
+
+function bindReminiscenceSearchInput() {
+    const input = element("reminiscence-memory-search");
+    if (!input || input.dataset.bound === "true") {
+        return;
+    }
+    input.dataset.bound = "true";
+    input.addEventListener("input", () => {
+        window.clearTimeout(reminiscenceSearchTimer);
+        reminiscenceSearchTimer = window.setTimeout(() => searchReminiscenceMemories(input.value), 250);
+    });
+}
+
+
+function reminiscencePromptKeyword(text) {
+    const pieces = cleanPieces(text);
+    return shortText(pieces[0] || text || "这段回忆", 18);
+}
+
+
+function memoryConversationPrompt(memory) {
+    return `你能给我讲讲关于 ${reminiscencePromptKeyword(memory?.text || "")} 的事吗？`;
+}
+
+
+function startConversationWithMemory(memoryId) {
+    const memory = findReminiscenceMemory(memoryId);
+    if (!memory) {
+        return;
+    }
+    startConversationWithSeed(memoryConversationPrompt(memory));
+}
+
+
+function materialImageUrl(material) {
+    return material?.thumbnail_url
+        || material?.image_url
+        || material?.file_url
+        || material?.url
+        || material?.file_path
+        || "";
+}
+
+
+function findAssociatedPhotoForMemory(memory) {
+    const text = String(memory?.text || "");
+    return currentFamiliarMaterials.find((material) => {
+        if (material.material_type !== "family_photo") {
+            return false;
+        }
+        const imageUrl = materialImageUrl(material);
+        if (!imageUrl) {
+            return false;
+        }
+        const candidates = [
+            material.related_person,
+            material.title,
+            material.description,
+        ].map((item) => String(item || "").trim()).filter((item) => item.length >= 2);
+        return candidates.some((candidate) => text.includes(candidate) || candidate.includes(reminiscencePromptKeyword(text)));
+    });
+}
+
+
+function memoryMetaText(memory) {
+    const pieces = [];
+    if (memory.approved_at) {
+        pieces.push(`审批时间：${String(memory.approved_at).replace("T", " ").slice(0, 16)}`);
+    }
+    if (memory.source) {
+        pieces.push(`来源：${shortText(memory.source, 48)}`);
+    }
+    if (memory.score !== null && memory.score !== undefined) {
+        pieces.push(`相关度：${Number(memory.score).toFixed(2)}`);
+    }
+    return pieces.length ? pieces.join(" · ") : "审批时间和来源暂未记录";
+}
+
+
+function renderReminiscenceMemoryButton(memory) {
+    const selected = String(memory.memory_id) === String(currentSelectedReminiscenceMemoryId);
+    return `
+        <button
+            type="button"
+            class="reminiscence-memory-item ${selected ? "active" : ""}"
+            data-memory-id="${escapeHtml(memory.memory_id)}"
+        >
+            <span>${escapeHtml(shortText(memory.text, 54))}</span>
+            ${memory.score !== null && memory.score !== undefined ? `<small>相关度 ${escapeHtml(Number(memory.score).toFixed(2))}</small>` : ""}
+        </button>
+    `;
+}
+
+
+function renderReminiscenceCategoryList() {
+    const container = element("reminiscence-category-list");
+    if (!container) {
+        return;
+    }
+    const query = String(element("reminiscence-memory-search")?.value || "").trim();
+    if (query) {
+        container.innerHTML = `
+            <section class="reminiscence-category-block">
+                <h3>搜索结果</h3>
+                <div class="reminiscence-memory-items">
+                    ${currentReminiscenceSearchResults.length ? currentReminiscenceSearchResults.map(renderReminiscenceMemoryButton).join("") : `
+                        <div class="log-empty">
+                            <strong>没有匹配的记忆。</strong>
+                            <span>可以换一个关键词，或先同步已审批记忆。</span>
+                        </div>
+                    `}
+                </div>
+            </section>
+        `;
+    } else {
+        const total = allReminiscenceMemories().length;
+        container.innerHTML = total ? reminiscenceCategories.map((category) => {
+            const items = currentReminiscenceMemoriesByCategory[category] || [];
+            return `
+                <section class="reminiscence-category-block">
+                    <h3>${escapeHtml(category)} <span>${escapeHtml(String(items.length))}</span></h3>
+                    <div class="reminiscence-memory-items">
+                        ${items.length ? items.map(renderReminiscenceMemoryButton).join("") : `<p class="reminiscence-empty-category">暂无${escapeHtml(category)}记忆</p>`}
+                    </div>
+                </section>
+            `;
+        }).join("") : `
+            <div class="log-empty">
+                <strong>向量库里还没有已确认记忆。</strong>
+                <span>请先运行 scripts/sync_memories.py，或审批新的候选记忆后再同步。</span>
+            </div>
+        `;
+    }
+
+    container.querySelectorAll(".reminiscence-memory-item").forEach((button) => {
+        button.addEventListener("click", () => {
+            currentSelectedReminiscenceMemoryId = button.dataset.memoryId || "";
+            renderReminiscencePage();
+        });
+    });
+}
+
+
+function renderReminiscenceDetail() {
+    const card = element("reminiscence-memory-detail-card");
+    if (!card) {
+        return;
+    }
+    const memory = findReminiscenceMemory(currentSelectedReminiscenceMemoryId);
+    if (!memory) {
+        card.innerHTML = `
+            <div class="log-empty">
+                <strong>请选择左侧一条记忆。</strong>
+                <span>选择后可以查看详情，并用这一段记忆开启对话。</span>
+            </div>
+        `;
+        return;
+    }
+    const photo = findAssociatedPhotoForMemory(memory);
+    const photoUrl = photo ? materialImageUrl(photo) : "";
+    card.innerHTML = `
+        <div class="reminiscence-detail-text">${escapeHtml(memory.text)}</div>
+        ${photoUrl ? `
+            <figure class="reminiscence-associated-photo">
+                <img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(photo.title || photo.related_person || "关联照片")}">
+                <figcaption>${escapeHtml([photo.related_person, photo.title].filter(Boolean).join(" · ") || "关联照片")}</figcaption>
+            </figure>
+        ` : `
+            <div class="reminiscence-no-photo">暂无关联照片，可在熟人素材库补充。</div>
+        `}
+        <div class="reminiscence-detail-meta">
+            <span class="status-pill">${escapeHtml(memory.category || "其他")}</span>
+            <span>${escapeHtml(memoryMetaText(memory))}</span>
+        </div>
+        <button type="button" class="primary-button reminiscence-memory-chat" data-memory-id="${escapeHtml(memory.memory_id)}">🗣️ 用这段记忆开启对话</button>
+    `;
+    card.querySelector(".reminiscence-memory-chat")?.addEventListener("click", (event) => {
+        startConversationWithMemory(event.currentTarget.dataset.memoryId || "");
+    });
+}
+
+
+function renderReminiscenceAiTopics() {
+    const container = element("reminiscence-ai-topics");
+    if (!container) {
+        return;
+    }
+    container.innerHTML = currentReminiscenceAiTopics.length ? currentReminiscenceAiTopics.map((memory, index) => `
+        <article class="reminiscence-topic-card">
+            <span class="status-pill">话题 ${escapeHtml(String(index + 1))}</span>
+            <h3>${escapeHtml(reminiscencePromptKeyword(memory.text))}</h3>
+            <p>${escapeHtml(shortText(memory.text, 92))}</p>
+            <button type="button" class="ghost-button reminiscence-topic-start" data-memory-id="${escapeHtml(memory.memory_id)}">开启话题</button>
+        </article>
+    `).join("") : `
+        <div class="log-empty">
+            <strong>暂时没有推荐话题。</strong>
+            <span>同步已审批记忆后，系统会从中挑选 3 个温和话题。</span>
+        </div>
+    `;
+    container.querySelectorAll(".reminiscence-topic-start").forEach((button) => {
+        button.addEventListener("click", () => startConversationWithMemory(button.dataset.memoryId || ""));
+    });
+}
+
+
 function remindCaregiverName() {
     const primaryLink = currentCaregiverLinks.find((item) => item.is_primary) || currentCaregiverLinks[0];
     if (primaryLink?.caregiver_name) {
         return primaryLink.caregiver_name;
     }
-    if (String(currentProfile.family_info || "").includes("陈小雨")) {
-        return "陈小雨";
-    }
-    return "陈小雨";
+    return currentSelectedPatient.relation || "照护者";
 }
 
 
@@ -2235,7 +3165,8 @@ function startConversationWithSeed(seedMessage) {
     if (!seedMessage) {
         return;
     }
-    window.location.href = `/conversation?seed_message=${encodeURIComponent(seedMessage)}`;
+    const patientPath = currentCaregiverPatientId ? `/${encodeURIComponent(currentCaregiverPatientId)}` : "";
+    window.location.href = `/conversation${patientPath}?seed_message=${encodeURIComponent(seedMessage)}`;
 }
 
 
@@ -2423,13 +3354,17 @@ function renderReminiscenceGroups(materials = activeReminiscenceMaterials()) {
 
 
 function renderReminiscencePage() {
-    const materials = activeReminiscenceMaterials();
-    setTextIfPresent("reminiscence-patient-name", currentProfile.name || "李桂兰（李奶奶）");
-    setTextIfPresent("reminiscence-profile-line", `${currentProfile.age || 78} 岁 · ${currentProfile.hometown || "温州"}`);
+    selectDefaultReminiscenceMemory();
+    const patientName = currentSelectedPatient.name || currentProfile.name || "患者";
+    setTextIfPresent("reminiscence-patient-name", `${patientName}的回忆追忆`);
+    const patientAge = currentSelectedPatient.age || currentProfile.age || "年龄未填";
+    const patientRelation = currentSelectedPatient.relation || currentProfile.hometown || "关系未填";
+    setTextIfPresent("reminiscence-profile-line", `${patientAge} 岁 · ${patientRelation} · 选择一条已确认记忆，温和开启陪伴对话。`);
     setTextIfPresent("reminiscence-caregiver-line", `主要家属：${remindCaregiverName()}`);
-    renderReminiscenceChips(materials);
-    renderReminiscenceRecommended(materials);
-    renderReminiscenceGroups(materials);
+    bindReminiscenceSearchInput();
+    renderReminiscenceCategoryList();
+    renderReminiscenceDetail();
+    renderReminiscenceAiTopics();
 }
 
 
@@ -2523,7 +3458,9 @@ function clearMaterialForm() {
         "material-use-scene",
         "material-suggested-use-scene",
         "material-related-time",
+        "material-photo-year",
         "material-tags",
+        "material-story-text",
         "material-safety-note"
     ].forEach((id) => {
         const node = element(id);
@@ -2562,8 +3499,10 @@ function materialPayloadFromForm() {
         use_scene: element("material-use-scene")?.value.trim() || "",
         suggested_use_scene: element("material-suggested-use-scene")?.value.trim() || "",
         related_time: element("material-related-time")?.value.trim() || "",
+        photo_year: element("material-photo-year")?.value ? Number(element("material-photo-year").value) : null,
         sensitivity_level: element("material-sensitivity-level")?.value || "",
         tags: element("material-tags")?.value.trim() || "",
+        story_text: element("material-story-text")?.value.trim() || "",
         safety_note: element("material-safety-note")?.value.trim() || "",
         is_sensitive: Boolean(element("material-is-sensitive")?.checked),
         is_active: Boolean(element("material-is-active")?.checked ?? true)
@@ -2587,8 +3526,12 @@ function materialPayloadFromMaterial(material, overrides = {}) {
         use_scene: material.use_scene || "",
         suggested_use_scene: material.suggested_use_scene || "",
         related_time: material.related_time || "",
+        photo_year: material.photo_year || null,
+        photo_decade: material.photo_decade || "",
         sensitivity_level: material.sensitivity_level || "",
         tags: material.tags || "",
+        story_text: material.story_text || "",
+        voice_note_path: material.voice_note_path || "",
         safety_note: material.safety_note || "",
         is_sensitive: Boolean(material.is_sensitive),
         is_active: material.is_active !== false,
@@ -2660,14 +3603,17 @@ function fillMaterialForm(material) {
     element("material-use-scene").value = material.use_scene || "";
     element("material-suggested-use-scene").value = material.suggested_use_scene || "";
     element("material-related-time").value = material.related_time || "";
+    element("material-photo-year").value = material.photo_year || "";
     element("material-sensitivity-level").value = material.sensitivity_level || "";
-    element("material-tags").value = material.tags || "";
+    element("material-tags").value = materialTags(material).join(", ");
+    element("material-story-text").value = material.story_text || "";
     element("material-safety-note").value = material.safety_note || "";
     element("material-is-sensitive").checked = Boolean(material.is_sensitive);
     element("material-is-active").checked = material.is_active !== false;
     setMaterialFormMode(true);
     updateMaterialTypeHints();
     setMaterialFormStatus("正在编辑素材", "warning");
+    openMaterialsDrawer();
 }
 
 
@@ -2787,15 +3733,105 @@ async function updateMaterialQuickFlag(materialId, overrides, successText) {
 }
 
 
+function stopMaterialVoiceRecording() {
+    if (materialVoiceRecorder && materialVoiceRecorder.state !== "inactive") {
+        materialVoiceRecorder.stop();
+    }
+}
+
+
+async function recordMaterialVoiceNote(materialId) {
+    if (!materialId) {
+        return;
+    }
+    if (materialVoiceRecorder && materialVoiceRecorder.state === "recording") {
+        stopMaterialVoiceRecording();
+        return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+        setMaterialFormStatus("当前浏览器不支持录音。", "warning");
+        return;
+    }
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        materialVoiceChunks = [];
+        materialVoiceRecordingId = String(materialId);
+        materialVoiceRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+        materialVoiceRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+                materialVoiceChunks.push(event.data);
+            }
+        };
+        materialVoiceRecorder.onstop = async () => {
+            stream.getTracks().forEach((track) => track.stop());
+            window.clearTimeout(materialVoiceStopTimer);
+            const blob = new Blob(materialVoiceChunks, { type: "audio/webm" });
+            materialVoiceChunks = [];
+            const recordingId = materialVoiceRecordingId;
+            materialVoiceRecordingId = null;
+            renderMaterialsPage();
+            if (!blob.size || !recordingId) {
+                setMaterialFormStatus("没有录到声音，请重新录制。", "warning");
+                return;
+            }
+            const formData = new FormData();
+            formData.append("audio", blob, `material_${recordingId}.webm`);
+            try {
+                setMaterialFormStatus("正在上传语音说明...", "warning");
+                const response = await fetch(`/api/materials/${encodeURIComponent(recordingId)}/voice-note`, {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.detail || "上传失败");
+                }
+                const updated = data.material || null;
+                if (updated) {
+                    currentFamiliarMaterials = currentFamiliarMaterials.map((item) => (
+                        String(item.id) === String(updated.id) ? updated : item
+                    ));
+                    renderMaterialsPage();
+                }
+                setMaterialFormStatus("语音说明已保存。", "success");
+            } catch (error) {
+                setMaterialFormStatus(error.message || "语音说明上传失败。", "warning");
+            }
+        };
+        materialVoiceRecorder.start();
+        materialVoiceStopTimer = window.setTimeout(stopMaterialVoiceRecording, 60000);
+        setMaterialFormStatus("正在录制语音说明，再点一次停止，最长 60 秒。", "warning");
+        renderMaterialsPage();
+    } catch (error) {
+        setMaterialFormStatus("无法开启麦克风，请检查浏览器权限。", "warning");
+    }
+}
+
+
 function bindMaterialsPage() {
     element("material-save-button")?.addEventListener("click", saveMaterial);
     element("material-reset-button")?.addEventListener("click", clearMaterialForm);
+    element("materials-drawer-open-button")?.addEventListener("click", () => {
+        clearMaterialForm();
+        openMaterialsDrawer();
+    });
+    element("materials-drawer-close-button")?.addEventListener("click", closeMaterialsDrawer);
     element("material-type")?.addEventListener("change", updateMaterialTypeHints);
     ["materials-filter-type", "materials-filter-sensitive", "materials-filter-search", "materials-filter-active"].forEach((id) => {
         element(id)?.addEventListener("input", renderMaterialsPage);
         element(id)?.addEventListener("change", renderMaterialsPage);
     });
     updateMaterialTypeHints();
+}
+
+
+function openMaterialsDrawer() {
+    document.body.classList.add("materials-drawer-open");
+}
+
+
+function closeMaterialsDrawer() {
+    document.body.classList.remove("materials-drawer-open");
 }
 
 
@@ -2870,6 +3906,7 @@ function materialMetaLines(material) {
         material.related_person && `关联人物：${material.related_person}`,
         (material.use_scene || material.suggested_use_scene) && `使用场景：${material.use_scene || material.suggested_use_scene}`,
         material.related_time && `相关时间：${material.related_time}`,
+        material.photo_year && `照片年份：${material.photo_year}`,
         material.artist && `艺术家：${material.artist}`,
         material.sensitivity_level && `敏感等级：${material.sensitivity_level}`,
     ].filter(Boolean);
@@ -2878,6 +3915,40 @@ function materialMetaLines(material) {
 
 function materialLinkText(material) {
     return shortText(material.file_path || material.url || material.image_url || material.audio_url || material.music_url || "", 72);
+}
+
+
+function materialImageUrl(material) {
+    const candidate = material.thumbnail_url || material.image_url || material.file_path || material.url || "";
+    return /^(https?:\/\/|\/static\/|data:image\/)/.test(String(candidate)) ? String(candidate) : "";
+}
+
+
+function materialTags(material) {
+    if (Array.isArray(material?.tag_list)) {
+        return material.tag_list.map((tag) => String(tag).trim()).filter(Boolean);
+    }
+    const raw = String(material?.tags || "").trim();
+    if (!raw) {
+        return [];
+    }
+    if (raw.startsWith("[")) {
+        try {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+                return parsed.map((tag) => String(tag).trim()).filter(Boolean);
+            }
+        } catch (error) {
+            // 历史脏数据按逗号标签兜底展示。
+        }
+    }
+    return raw.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
+}
+
+
+function materialRelationshipLabel(material) {
+    const tags = materialTags(material);
+    return material.related_person || tags[0] || materialTypeLabels[material.material_type] || "熟悉素材";
 }
 
 
@@ -2902,7 +3973,13 @@ function renderMaterialsPage() {
         return;
     }
     list.innerHTML = visibleMaterials.map((material) => `
-        <article class="material-card ${material.is_sensitive ? "material-card-sensitive" : ""}">
+        <article class="material-card material-photo-card ${material.is_sensitive ? "material-card-sensitive" : ""}">
+            <div class="material-photo-frame">
+                ${materialImageUrl(material)
+                    ? `<img src="${escapeHtml(materialImageUrl(material))}" alt="${escapeHtml(material.title || "熟悉照片")}">`
+                    : `<div class="material-photo-placeholder" aria-hidden="true">${escapeHtml((material.title || material.related_person || "素").slice(0, 1))}</div>`}
+                <div class="material-photo-overlay">查看详情</div>
+            </div>
             <div class="material-card-main">
                 <div class="material-card-pill-row">
                     <span class="status-pill">${escapeHtml(materialTypeLabels[material.material_type] || material.material_type)}</span>
@@ -2910,18 +3987,22 @@ function renderMaterialsPage() {
                     ${material.is_active === false ? '<span class="status-pill neutral">不参与对话</span>' : '<span class="status-pill success">可用于对话</span>'}
                 </div>
                 <h3>${escapeHtml(material.title || "未命名素材")}</h3>
+                <span class="material-relation-badge">${escapeHtml(materialRelationshipLabel(material))}</span>
                 <p>${escapeHtml(material.description || "暂无描述。")}</p>
                 <div class="material-card-meta">
                     ${materialMetaLines(material).length ? materialMetaLines(material).map((line) => `<span>${escapeHtml(line)}</span>`).join("") : '<span>未填写更多线索</span>'}
                 </div>
-                ${material.tags ? `<div class="material-tag-row">${String(material.tags).split(",").map((tag) => tag.trim()).filter(Boolean).map((tag) => `<span class="app-inline-pill">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+                ${materialTags(material).length ? `<div class="material-tag-row">${materialTags(material).map((tag) => `<span class="app-inline-pill">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
                 ${materialLinkText(material) ? `<small>链接 / 路径：${escapeHtml(materialLinkText(material))}</small>` : ""}
+                ${material.story_text ? `<p class="material-story-preview">照片故事：${escapeHtml(material.story_text)}</p>` : ""}
                 ${material.transcript_text ? `<p class="material-safety-note">转写摘要：${escapeHtml(material.transcript_text)}</p>` : ""}
                 ${material.safety_note ? `<p class="material-safety-note">安全提示：${escapeHtml(material.safety_note)}</p>` : ""}
                 ${material.is_sensitive ? '<p class="material-sensitive-tip">敏感素材不会主动刺激患者，只有相关话题被触发时才用于安全模板。</p>' : ""}
             </div>
             <div class="material-card-actions">
                 <button type="button" class="ghost-button material-chat-button" data-material-title="${escapeHtml(material.title || "熟悉素材")}">用这段开始聊天</button>
+                <button type="button" class="ghost-button material-voice-record-button ${String(materialVoiceRecordingId) === String(material.id) ? "recording" : ""}" data-material-id="${material.id}">${String(materialVoiceRecordingId) === String(material.id) ? "停止录音" : "🎙️ 录制语音说明"}</button>
+                ${material.voice_note_path ? `<button type="button" class="ghost-button material-voice-play-button" data-voice-path="${escapeHtml(material.voice_note_path)}">🔊 播放说明</button>` : ""}
                 <button type="button" class="ghost-button material-edit-button" data-material-id="${material.id}">编辑</button>
                 ${material.material_type === "sensitive_memory"
                     ? '<span class="status-pill warning">敏感类型</span>'
@@ -2935,6 +4016,17 @@ function renderMaterialsPage() {
         button.addEventListener("click", () => {
             const title = button.dataset.materialTitle || "熟悉素材";
             window.location.href = `/conversation?seed_message=${encodeURIComponent(`我想聊聊：${title}`)}`;
+        });
+    });
+    list.querySelectorAll(".material-voice-record-button").forEach((button) => {
+        button.addEventListener("click", () => recordMaterialVoiceNote(button.dataset.materialId));
+    });
+    list.querySelectorAll(".material-voice-play-button").forEach((button) => {
+        button.addEventListener("click", () => {
+            const path = button.dataset.voicePath || "";
+            if (path) {
+                new Audio(path).play().catch(() => setMaterialFormStatus("语音说明播放失败。", "warning"));
+            }
         });
     });
     list.querySelectorAll(".material-edit-button").forEach((button) => {
@@ -3033,10 +4125,7 @@ function getPrimaryCaregiverName() {
     if (primaryLink?.caregiver_name) {
         return primaryLink.caregiver_name;
     }
-    if (String(currentProfile.family_info || "").includes("陈小雨")) {
-        return "陈小雨";
-    }
-    return "陈小雨";
+    return currentSelectedPatient.relation || "照护者";
 }
 
 
@@ -3165,7 +4254,7 @@ function buildChatHistoryEntries() {
 
 
 function renderChatHistoryOverview(entries) {
-    const patientName = currentProfile.name || "李桂兰（李奶奶）";
+    const patientName = currentSelectedPatient.name || currentProfile.name || "患者";
     setTextIfPresent("chat-history-patient-name", patientName);
     setTextIfPresent("chat-history-caregiver-name", `主要家属：${getPrimaryCaregiverName()}`);
 
@@ -3353,15 +4442,19 @@ function renderMemoryCandidateGroup(title, description, candidates, emptyText) {
         `;
     }
 
+    const isCollapsibleGroup = candidates.every((candidate) => candidate.status !== "pending");
+    const wrapperTag = isCollapsibleGroup ? "details" : "section";
+    const headTag = isCollapsibleGroup ? "summary" : "div";
+    const wrapperAttrs = isCollapsibleGroup ? "" : "";
     return `
-        <section class="chat-history-candidate-group">
-            <div class="chat-history-candidate-group-head">
+        <${wrapperTag} class="chat-history-candidate-group candidate-review-group" ${wrapperAttrs}>
+            <${headTag} class="chat-history-candidate-group-head">
                 <div>
                     <h3>${escapeHtml(title)}</h3>
                     <p>${escapeHtml(description)}</p>
                 </div>
                 <span class="status-pill">${escapeHtml(String(candidates.length))} 条</span>
-            </div>
+            </${headTag}>
             <div class="chat-history-candidate-list">
                 ${candidates.map((candidate) => {
                     const draft = getMemoryCandidateDraft(candidate);
@@ -3373,17 +4466,25 @@ function renderMemoryCandidateGroup(title, description, candidates, emptyText) {
                                     <span class="status-pill">${escapeHtml(materialTypeLabels[candidate.suggested_material_type] || candidate.suggested_material_type || "记忆候选")}</span>
                                     <span class="status-pill ${candidate.status === "approved" ? "success" : candidate.status === "rejected" ? "neutral" : "pending"}">${escapeHtml(candidate.status || "pending")}</span>
                                     ${candidate.is_sensitive ? '<span class="status-pill warning">敏感</span>' : '<span class="status-pill success">非敏感</span>'}
+                                    ${candidate.dedup_warning ? `<span class="memory-warning-badge duplicate" title="${escapeHtml(candidate.dedup_warning)}">⚠️ 疑似重复</span>` : ""}
+                                    ${candidate.conflict_warning ? `<span class="memory-warning-badge conflict" title="${escapeHtml(candidate.conflict_warning)}">❗ 内容冲突</span>` : ""}
                                 </div>
                                 ${candidate.status === "approved" ? '<span class="status-pill success">已加入熟悉素材库</span>' : ""}
                             </div>
                             <h4>${escapeHtml(candidate.suggested_title || "未命名候选")}</h4>
-                            <p>${escapeHtml(candidate.suggested_description || "暂无建议描述。")}</p>
+                            <div class="candidate-memory-text">
+                                <span>提取的记忆文本</span>
+                                <p>${escapeHtml(candidate.suggested_description || "暂无建议描述。")}</p>
+                            </div>
+                            <div class="candidate-source-summary">
+                                <span>原对话摘要</span>
+                                <p>${escapeHtml(candidate.source_message || "未记录")}</p>
+                            </div>
                             <div class="chat-history-candidate-meta">
-                                <span><strong>来源对话：</strong>${escapeHtml(candidate.source_message || "未记录")}</span>
                                 <span><strong>关联人物：</strong>${escapeHtml(candidate.related_person || "未填写")}</span>
                                 <span><strong>建议类型：</strong>${escapeHtml(materialTypeLabels[candidate.suggested_material_type] || candidate.suggested_material_type || "旧事件")}</span>
                                 <span><strong>敏感等级：</strong>${escapeHtml(candidate.sensitivity_level || "low")}</span>
-                                <span><strong>创建时间：</strong>${escapeHtml(formatHistoryDateTime(candidate.created_at))}</span>
+                                <span><strong>来源时间：</strong>${escapeHtml(formatHistoryDateTime(candidate.created_at))}</span>
                                 <span><strong>审核时间：</strong>${escapeHtml(candidate.reviewed_at ? formatHistoryDateTime(candidate.reviewed_at) : "待审核")}</span>
                             </div>
                             ${candidate.is_sensitive ? `
@@ -3394,8 +4495,8 @@ function renderMemoryCandidateGroup(title, description, candidates, emptyText) {
                             ` : ""}
                             ${candidate.status === "pending" ? `
                                 <div class="chat-history-candidate-actions">
-                                    <button type="button" class="ghost-button memory-approve-button" data-candidate-id="${candidate.id}">加入素材库</button>
-                                    <button type="button" class="ghost-button memory-reject-button" data-candidate-id="${candidate.id}">忽略</button>
+                                    <button type="button" class="ghost-button memory-reject-button swipe-reject-button" data-candidate-id="${candidate.id}">← 左滑拒绝</button>
+                                    <button type="button" class="ghost-button memory-approve-button swipe-approve-button" data-candidate-id="${candidate.id}">右滑接受 →</button>
                                     <button type="button" class="ghost-button memory-sensitive-button" data-candidate-id="${candidate.id}">标记为敏感</button>
                                     <button type="button" class="ghost-button memory-edit-button" data-candidate-id="${candidate.id}">${isEditorOpen ? "收起编辑" : "编辑后加入"}</button>
                                 </div>
@@ -3450,7 +4551,7 @@ function renderMemoryCandidateGroup(title, description, candidates, emptyText) {
                     `;
                 }).join("")}
             </div>
-        </section>
+        </${wrapperTag}>
     `;
 }
 
@@ -4231,9 +5332,11 @@ async function sendMessage(options = {}) {
                 "Content-Type": "application/json"
             },
             body: JSON.stringify({
-                user_id: currentUserId,
+                user_id: legacyProfileUserId() ? Number(legacyProfileUserId()) : null,
                 message,
-                mode: getCurrentMode()
+                mode: getCurrentMode(),
+                patient_id: currentCaregiverPatientId,
+                session_id: currentChatSessionId
             })
         });
 
@@ -4241,6 +5344,10 @@ async function sendMessage(options = {}) {
 
         if (!response.ok) {
             throw new Error(data.detail || "聊天请求失败");
+        }
+        if (data.session_id) {
+            currentChatSessionId = data.session_id;
+            sessionStorage.setItem(chatSessionStorageKey, currentChatSessionId);
         }
 
         currentProfile = { ...(data.profile || currentProfile) };

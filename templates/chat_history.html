@@ -4,178 +4,131 @@
 <section class="caregiver-page-header chat-history-header">
     <div>
         <p class="section-kicker">Chat History</p>
-        <h1>李奶奶聊天记录与记忆候选</h1>
-        <p class="subtitle">家属可查看最近对话，审核哪些内容适合沉淀为熟悉素材。</p>
+        <h1>{{ patient.name if patient is defined else profile.name or "患者" }}对话历史</h1>
+        <p class="subtitle">按会话回看完整对话，并查看每轮 AI 回复的质量评分与问题标签。</p>
     </div>
     <div class="analysis-top-actions">
-        <a class="ghost-button" href="/conversation?debug=1">进入患者端对话</a>
-        <a class="ghost-button" href="/materials">查看熟悉素材库</a>
+        <a class="ghost-button" href="/care-portal/{{ caregiver_patient_id }}">返回看板</a>
+        <a class="ghost-button" href="/conversation/{{ caregiver_patient_id }}">进入对话</a>
     </div>
 </section>
 
-<section class="debug-card debug-card-wide chat-history-overview-card">
-    <div class="chat-history-overview-head">
-        <div>
-            <p class="card-kicker">顶部概览</p>
-            <h2>聊天回顾与记忆沉淀</h2>
-            <p>家属确认后，候选才进入长期熟悉素材库。</p>
+<section class="chat-review-layout" data-patient-id="{{ caregiver_patient_id }}">
+    <aside class="chat-review-sessions" aria-label="对话会话列表">
+        <div class="chat-review-panel-head">
+            <p class="card-kicker">Sessions</p>
+            <h2>最近会话</h2>
         </div>
-        <div class="chat-history-overview-meta">
-            <span class="status-pill">当前患者：李桂兰（李奶奶）</span>
-            <span class="status-pill">主要家属：陈小雨</span>
-        </div>
-    </div>
-    <div class="chat-history-overview-grid">
-        <div class="chat-history-overview-main">
-            <div class="chat-history-profile-block">
-                <p class="chat-history-overview-label">当前患者</p>
-                <h3 id="chat-history-patient-name">{{ profile.name or "李桂兰（李奶奶）" }}</h3>
-                <p id="chat-history-caregiver-name">主要家属：陈小雨</p>
-                <p>页面用途：聊天回顾 / 记忆候选审核</p>
-            </div>
-        </div>
-        <div id="chat-history-stats-grid" class="chat-history-stats-grid">
-            <div class="analysis-status-item ready">
-                <span>最近聊天数量</span>
-                <strong>{{ recent_logs | length }}</strong>
-            </div>
-            <div class="analysis-status-item warning">
-                <span>风险相关对话数量</span>
-                <strong>--</strong>
-            </div>
-            <div class="analysis-status-item pending">
-                <span>待审核候选</span>
-                <strong>{{ memory_candidates | selectattr("status", "equalto", "pending") | list | length }}</strong>
-            </div>
-            <div class="analysis-status-item approved">
-                <span>已加入素材</span>
-                <strong>{{ memory_candidates | selectattr("status", "equalto", "approved") | list | length }}</strong>
-            </div>
-            <div class="analysis-status-item rejected">
-                <span>已忽略</span>
-                <strong>{{ memory_candidates | selectattr("status", "equalto", "rejected") | list | length }}</strong>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="debug-card debug-card-wide chat-history-filter-card">
-    <div class="chat-history-filter-head">
-        <div>
-            <p class="card-kicker">聊天记录筛选</p>
-            <h2>按主题快速回看</h2>
-        </div>
-        <span class="chat-history-filter-note">前端即时筛选，不会改动原始聊天记录。</span>
-    </div>
-    <div class="chat-history-filter-grid">
-        <label class="field">
-            <span>搜索聊天内容</span>
-            <input id="chat-history-search" type="search" placeholder="搜索患者原话、系统回复、标签">
-        </label>
-        <label class="field">
-            <span>类型筛选</span>
-            <select id="chat-history-type-filter">
-                <option value="all">全部</option>
-                <option value="normal">普通聊天</option>
-                <option value="repeated_question">重复提问</option>
-                <option value="medication_uncertainty">用药不确定</option>
-                <option value="anxiety">焦虑/害怕</option>
-                <option value="disorientation">位置困惑</option>
-                <option value="wandering_intent">外出风险</option>
-                <option value="sensitive_deceased_spouse_topic">敏感亲人话题</option>
-                <option value="reminiscence_content">回忆内容</option>
-            </select>
-        </label>
-        <label class="field">
-            <span>日期筛选</span>
-            <select id="chat-history-date-filter">
-                <option value="today">今天</option>
-                <option value="3d">最近 3 天</option>
-                <option value="7d">最近 7 天</option>
-                <option value="all">全部</option>
-            </select>
-        </label>
-        <label class="field">
-            <span>家属事件触发</span>
-            <select id="chat-history-event-filter">
-                <option value="all">全部</option>
-                <option value="triggered">已触发</option>
-                <option value="not_triggered">未触发</option>
-            </select>
-        </label>
-    </div>
-</section>
-
-<section class="chat-history-body-grid">
-    <div class="debug-card debug-card-wide chat-history-panel">
-        <div class="chat-history-panel-head">
-            <div>
-                <p class="card-kicker">最近聊天记录</p>
-                <h2>家属阅读版摘要</h2>
-                <p>展示患者原话、系统回复和相关标签。</p>
-            </div>
-            <span id="chat-history-log-count" class="status-pill">0 条</span>
-        </div>
-        <div id="chat-history-log-list" class="chat-history-log-list">
-            {% if chat_history_groups %}
-                {% for group in chat_history_groups %}
-                {% for item in group.logs %}
-                <article class="history-log-card">
-                    <div class="history-log-head">
-                        <strong>{{ "患者" if item.role == "user" else "助手" }}</strong>
-                        <time>{{ item.timestamp or "" }}</time>
-                    </div>
-                    <p>{{ item.message }}</p>
-                </article>
-                {% endfor %}
+        <div id="chat-review-session-list" class="chat-review-session-list">
+            {% if chat_sessions %}
+                {% for session in chat_sessions %}
+                <button
+                    type="button"
+                    class="chat-review-session-card"
+                    data-session-id="{{ session.session_id }}"
+                >
+                    <strong>{{ session.date or "未知时间" }}</strong>
+                    <span>{{ session.turn_count }} 轮 · ⭐ {{ session.avg_score if session.avg_score is not none else "未评估" }}</span>
+                    {% if session.flags %}
+                    <small>{{ session.flags | join("、") }}</small>
+                    {% endif %}
+                </button>
                 {% endfor %}
             {% else %}
-            <div class="log-empty">
-                <strong>暂无聊天记录。</strong>
-                <span>可以先到患者端测试几句典型场景。</span>
-            </div>
+                <div class="log-empty">
+                    <strong>暂无对话历史。</strong>
+                    <span>完成一轮患者对话后，系统会在后台生成质量评分。</span>
+                </div>
             {% endif %}
         </div>
-    </div>
+    </aside>
 
-    <div class="debug-card debug-card-wide chat-history-panel">
-        <div class="chat-history-panel-head">
-            <div>
-                <p class="card-kicker">记忆候选审核</p>
-                <h2>家属确认后再沉淀</h2>
-                <p>系统不会自动写入长期记忆。</p>
-            </div>
-            <a class="ghost-button" href="/materials">查看熟悉素材库</a>
+    <main class="chat-review-detail" aria-label="会话详情">
+        <div class="chat-review-panel-head">
+            <p class="card-kicker">Timeline</p>
+            <h2 id="chat-review-detail-title">请选择左侧会话</h2>
         </div>
-        <div id="chat-history-candidate-status" class="materials-form-status materials-form-status-hidden" aria-live="polite"></div>
-        <div id="memory-candidate-list" class="chat-history-candidate-groups">
-            {% if memory_candidates %}
-            <div class="chat-history-candidate-group">
-                <h3>正在加载候选分组...</h3>
-            </div>
-            {% else %}
+        <div id="chat-review-timeline" class="chat-review-timeline">
             <div class="log-empty">
-                <strong>还没有待审核的记忆候选。</strong>
-                <span>先到患者端聊一轮回忆相关话题，这里会自动出现候选卡片。</span>
+                <strong>选择一个会话查看完整记录。</strong>
+                <span>助手回复右侧会显示质量标签。</span>
             </div>
-            {% endif %}
         </div>
-    </div>
+        <section class="chat-review-flags">
+            <h3>本次会话问题标签</h3>
+            <div id="chat-review-flags-list" class="chat-review-flags-list">
+                <span class="status-pill success">暂无问题标签</span>
+            </div>
+        </section>
+    </main>
 </section>
 
-<section class="debug-card debug-card-wide chat-history-help-card">
-    <div class="chat-history-help-head">
-        <div>
-            <p class="card-kicker">使用说明与安全边界</p>
-            <h2>为什么需要家属审核？</h2>
-        </div>
-    </div>
-    <ol class="chat-history-help-list">
-        <li>系统不会让 LLM 自动写入长期记忆。</li>
-        <li>聊天中提到的旧经历、人物关系、兴趣爱好，可以先作为候选。</li>
-        <li>家属确认后才会进入熟悉素材库。</li>
-        <li>敏感内容，例如已故亲人、创伤事件、争执经历，必须谨慎标记。</li>
-        <li>记忆沉淀用于陪伴与回忆引导，不用于医疗诊断。</li>
-    </ol>
-</section>
+<script>
+window.CHAT_REVIEW_BOOTSTRAP = {
+    sessions: {{ chat_sessions | tojson }},
+    records: {{ chat_history_records | tojson }}
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    const sessions = window.CHAT_REVIEW_BOOTSTRAP.sessions || [];
+    const records = window.CHAT_REVIEW_BOOTSTRAP.records || [];
+    const buttons = Array.from(document.querySelectorAll(".chat-review-session-card"));
+    const title = document.getElementById("chat-review-detail-title");
+    const timeline = document.getElementById("chat-review-timeline");
+    const flagsList = document.getElementById("chat-review-flags-list");
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function labelClass(label) {
+        if (label === "优秀") return "excellent";
+        if (label === "良好") return "good";
+        if (label === "一般") return "fair";
+        if (label === "需改进") return "needs-work";
+        return "unknown";
+    }
+
+    function renderSession(sessionId) {
+        const session = sessions.find((item) => item.session_id === sessionId) || {};
+        const rows = records
+            .filter((item) => item.session_id === sessionId)
+            .sort((a, b) => String(a.timestamp || "").localeCompare(String(b.timestamp || "")));
+        buttons.forEach((button) => button.classList.toggle("active", button.dataset.sessionId === sessionId));
+        title.textContent = `${session.date || "会话"} · ${session.turn_count || 0} 轮 · ⭐ ${session.avg_score ?? "未评估"}`;
+        timeline.innerHTML = rows.length ? rows.map((item) => `
+            <article class="chat-review-turn ${item.role === "assistant" ? "assistant" : "user"}">
+                <div class="chat-review-turn-head">
+                    <strong>${item.role === "assistant" ? "AI 回复" : "患者发言"}</strong>
+                    <time>${escapeHtml(String(item.timestamp || "").replace("T", " ").slice(0, 16))}</time>
+                    ${item.role === "assistant" ? `<span class="quality-badge ${labelClass(item.quality_label)}">${escapeHtml(item.quality_label || "未评估")}</span>` : ""}
+                </div>
+                <p>${escapeHtml(item.content || "")}</p>
+                ${item.role === "assistant" && item.quality_note ? `<small>${escapeHtml(item.quality_note)}</small>` : ""}
+            </article>
+        `).join("") : `
+            <div class="log-empty">
+                <strong>这个会话暂无记录。</strong>
+                <span>可能评分任务尚未写入完成。</span>
+            </div>
+        `;
+        const flags = Array.isArray(session.flags) ? session.flags : [];
+        flagsList.innerHTML = flags.length
+            ? flags.map((flag) => `<span class="status-pill warning">${escapeHtml(flag)}</span>`).join("")
+            : `<span class="status-pill success">暂无问题标签</span>`;
+    }
+
+    buttons.forEach((button) => {
+        button.addEventListener("click", () => renderSession(button.dataset.sessionId || ""));
+    });
+    if (buttons[0]) {
+        renderSession(buttons[0].dataset.sessionId || "");
+    }
+});
+</script>
 {% endblock %}

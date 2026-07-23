@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="caregiver-page-header patient-detail-header">
+    <div>
+        <p class="section-kicker">Patient Settings</p>
+        <h1>{{ patient.avatar_emoji }} {{ patient.name }}的档案设置</h1>
+        <p class="subtitle">维护患者基本信息、用药计划、知情同意和本地数据。</p>
+    </div>
+    <div class="analysis-top-actions">
+        <a class="ghost-button" href="/patients">返回患者列表</a>
+        <a class="ghost-button" href="/care-portal/{{ patient.id }}">进入照护</a>
+    </div>
+</section>
+
+<section class="patient-detail-shell" data-patient-id="{{ patient.id }}">
+    <nav class="patient-detail-tabs" aria-label="患者设置分类">
+        <button type="button" class="patient-detail-tab active" data-tab="basic">基本信息</button>
+        <button type="button" class="patient-detail-tab" data-tab="medication">用药计划</button>
+        <button type="button" class="patient-detail-tab" data-tab="consent">知情同意</button>
+        <button type="button" class="patient-detail-tab" data-tab="data">数据管理</button>
+        {% if current_caregiver and current_caregiver.role == "owner" %}
+        <button type="button" class="patient-detail-tab" data-tab="team">团队管理</button>
+        {% endif %}
+    </nav>
+
+    <section id="patient-tab-basic" class="patient-detail-panel active">
+        <form id="patient-detail-form" class="patient-detail-form">
+            <label>
+                <span>头像标识</span>
+                <div id="detail-avatar-options" class="patient-avatar-options">
+                    {% for emoji in ["👵", "👴", "👩", "👨", "🧓"] %}
+                    <button type="button" class="patient-avatar-choice" data-emoji="{{ emoji }}">{{ emoji }}</button>
+                    {% endfor %}
+                </div>
+            </label>
+            <label><span>姓名</span><input id="detail-name" type="text" value="{{ patient.name }}" required></label>
+            <label><span>年龄</span><input id="detail-age" type="number" min="0" max="120" value="{{ patient.age or '' }}"></label>
+            <label><span>关系</span><input id="detail-relation" type="text" value="{{ patient.relation }}"></label>
+            <label>
+                <span>病情阶段</span>
+                <select id="detail-stage">
+                    {% for stage in ["轻度", "中度", "重度"] %}
+                    <option value="{{ stage }}" {% if patient.stage == stage %}selected{% endif %}>{{ stage }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+            <label class="patient-detail-wide"><span>备注</span><textarea id="detail-notes" rows="4">{{ patient.notes }}</textarea></label>
+            <button type="submit" class="primary-button">保存基本信息</button>
+            <p id="detail-basic-status" class="summary-note-text" aria-live="polite"></p>
+        </form>
+    </section>
+
+    <section id="patient-tab-medication" class="patient-detail-panel">
+        <div class="patient-detail-section-head">
+            <div>
+                <p class="card-kicker">Medication</p>
+                <h2>用药提醒设置</h2>
+            </div>
+        </div>
+        <div id="detail-medication-list" class="care-record-list"></div>
+        <div class="reminder-form-grid medication-schedule-form">
+            <label><span>药品名称</span><input id="detail-medication-name" type="text" placeholder="例如：降压药"></label>
+            <label><span>提醒时间</span><input id="detail-medication-time" type="time"></label>
+            <label><span>剂量</span><input id="detail-medication-dose" type="text" placeholder="例如：1片"></label>
+            <div class="reminder-form-actions"><button id="detail-add-medication" type="button">添加提醒</button></div>
+        </div>
+        <p id="detail-medication-status" class="summary-note-text" aria-live="polite"></p>
+    </section>
+
+    <section id="patient-tab-consent" class="patient-detail-panel">
+        {% if consent_record.consented %}
+        <div class="patient-consent-card success">
+            <strong>已完成知情同意</strong>
+            <span>签署人：{{ consent_record.consented_by }}</span>
+            <span>签署时间：{{ consent_record.consent_time }}</span>
+            <span>版本：{{ consent_record.consent_version }}</span>
+        </div>
+        {% else %}
+        <div class="patient-consent-card">
+            <strong>尚未完成知情同意</strong>
+            <span>首次使用对话前需要照护者确认。</span>
+            <a class="ghost-button" href="/consent/{{ patient.id }}">前往知情同意</a>
+        </div>
+        {% endif %}
+    </section>
+
+    <section id="patient-tab-data" class="patient-detail-panel">
+        <div class="patient-data-actions">
+            <button id="detail-export-data" type="button" class="ghost-button">导出患者数据</button>
+            <button id="detail-clear-conversations" type="button" class="ghost-button patient-delete-button">清空对话记录</button>
+        </div>
+        <p id="detail-data-status" class="summary-note-text" aria-live="polite">导出数据不包含任何 API key。</p>
+    </section>
+
+    {% if current_caregiver and current_caregiver.role == "owner" %}
+    <section id="patient-tab-team" class="patient-detail-panel">
+        <div class="patient-detail-section-head">
+            <div>
+                <p class="card-kicker">Team</p>
+                <h2>协作照护者</h2>
+            </div>
+        </div>
+        <div id="team-caregiver-list" class="care-record-list"></div>
+        <form id="team-caregiver-form" class="patient-detail-form patient-detail-team-form">
+            <label><span>姓名</span><input id="team-caregiver-name" type="text" required placeholder="例如：女儿小雨"></label>
+            <label><span>初始 PIN</span><input id="team-caregiver-pin" type="password" inputmode="numeric" maxlength="4" required placeholder="4 位数字"></label>
+            <label>
+                <span>角色</span>
+                <select id="team-caregiver-role">
+                    <option value="member">member</option>
+                    <option value="owner">owner</option>
+                </select>
+            </label>
+            <button type="submit" class="primary-button">新增照护者</button>
+            <p id="team-caregiver-status" class="summary-note-text" aria-live="polite"></p>
+        </form>
+    </section>
+    {% endif %}
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const patientId = "{{ patient.id }}";
+    let selectedAvatar = "{{ patient.avatar_emoji or '👵' }}";
+    const currentCaregiver = {{ current_caregiver | tojson }};
+
+    function setStatus(id, text) {
+        const node = document.getElementById(id);
+        if (node) node.textContent = text;
+    }
+
+    function setAvatar(emoji) {
+        selectedAvatar = emoji || "👵";
+        document.querySelectorAll(".patient-avatar-choice").forEach((button) => {
+            button.classList.toggle("active", button.dataset.emoji === selectedAvatar);
+        });
+    }
+
+    document.querySelectorAll(".patient-detail-tab").forEach((button) => {
+        button.addEventListener("click", () => {
+            document.querySelectorAll(".patient-detail-tab").forEach((item) => item.classList.toggle("active", item === button));
+            document.querySelectorAll(".patient-detail-panel").forEach((panel) => panel.classList.toggle("active", panel.id === `patient-tab-${button.dataset.tab}`));
+        });
+    });
+
+    document.querySelectorAll(".patient-avatar-choice").forEach((button) => button.addEventListener("click", () => setAvatar(button.dataset.emoji)));
+    setAvatar(selectedAvatar);
+
+    document.getElementById("patient-detail-form")?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setStatus("detail-basic-status", "正在保存...");
+        const payload = {
+            name: document.getElementById("detail-name").value.trim(),
+            age: document.getElementById("detail-age").value ? Number(document.getElementById("detail-age").value) : null,
+            relation: document.getElementById("detail-relation").value.trim(),
+            stage: document.getElementById("detail-stage").value,
+            notes: document.getElementById("detail-notes").value.trim(),
+            avatar_emoji: selectedAvatar,
+        };
+        try {
+            const response = await fetch(`/api/patients/${encodeURIComponent(patientId)}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "保存失败");
+            setStatus("detail-basic-status", "已保存。");
+        } catch (error) {
+            setStatus("detail-basic-status", error.message || "保存失败。");
+        }
+    });
+
+    async function loadMedication() {
+        const response = await fetch(`/api/reminders/${encodeURIComponent(patientId)}?include_disabled=1`);
+        const items = await response.json();
+        const list = document.getElementById("detail-medication-list");
+        if (!response.ok || !Array.isArray(items)) {
+            list.innerHTML = `<div class="log-empty"><strong>用药计划加载失败。</strong></div>`;
+            return;
+        }
+        list.innerHTML = items.length ? items.map((item) => `
+            <article class="care-record-card medication-detail-row">
+                <div>
+                    <strong>${item.medication_name}</strong>
+                    <span>${item.remind_time} · ${item.dose || "剂量未填"} · ${item.enabled ? "启用" : "暂停"}</span>
+                </div>
+                <div class="medication-detail-actions">
+                    <button type="button" class="ghost-button medication-toggle" data-id="${item.id}" data-enabled="${item.enabled ? "0" : "1"}">${item.enabled ? "暂停" : "启用"}</button>
+                    <button type="button" class="ghost-button medication-delete" data-id="${item.id}">删除</button>
+                </div>
+            </article>
+        `).join("") : `<div class="log-empty"><strong>还没有用药提醒。</strong></div>`;
+        list.querySelectorAll(".medication-toggle").forEach((button) => {
+            button.addEventListener("click", async () => {
+                await fetch(`/api/reminders/${button.dataset.id}/toggle`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ enabled: button.dataset.enabled === "1" }),
+                });
+                await loadMedication();
+            });
+        });
+        list.querySelectorAll(".medication-delete").forEach((button) => {
+            button.addEventListener("click", async () => {
+                if (!window.confirm("确认删除这条用药提醒？")) return;
+                await fetch(`/api/reminders/${button.dataset.id}`, { method: "DELETE" });
+                await loadMedication();
+            });
+        });
+    }
+
+    document.getElementById("detail-add-medication")?.addEventListener("click", async () => {
+        setStatus("detail-medication-status", "正在添加...");
+        const payload = {
+            medication_name: document.getElementById("detail-medication-name").value.trim(),
+            remind_time: document.getElementById("detail-medication-time").value,
+            dose: document.getElementById("detail-medication-dose").value.trim(),
+        };
+        try {
+            const response = await fetch(`/api/reminders/${encodeURIComponent(patientId)}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "添加失败");
+            setStatus("detail-medication-status", "已添加。");
+            await loadMedication();
+        } catch (error) {
+            setStatus("detail-medication-status", error.message || "添加失败。");
+        }
+    });
+
+    document.getElementById("detail-export-data")?.addEventListener("click", () => {
+        if (window.confirm("确认导出该患者数据？")) {
+            window.location.href = `/api/patients/${encodeURIComponent(patientId)}/export`;
+        }
+    });
+
+    document.getElementById("detail-clear-conversations")?.addEventListener("click", async () => {
+        if (!window.confirm("确认清空该患者的对话记录？此操作不可撤销。")) return;
+        const response = await fetch(`/api/patients/${encodeURIComponent(patientId)}/conversations`, { method: "DELETE" });
+        const data = await response.json();
+        setStatus("detail-data-status", response.ok ? `已清空 ${data.deleted_count || 0} 条对话记录。` : (data.detail || "清空失败。"));
+    });
+
+    async function loadTeamCaregivers() {
+        const list = document.getElementById("team-caregiver-list");
+        if (!list || currentCaregiver?.role !== "owner") return;
+        const response = await fetch("/api/caregivers");
+        const data = await response.json();
+        if (!response.ok) {
+            list.innerHTML = `<div class="log-empty"><strong>${data.detail || "团队列表加载失败。"}</strong></div>`;
+            return;
+        }
+        const caregivers = Array.isArray(data.caregivers) ? data.caregivers : [];
+        list.innerHTML = caregivers.length ? caregivers.map((item) => `
+            <article class="care-record-card team-caregiver-row">
+                <div>
+                    <strong>${item.avatar_emoji || "👤"} ${item.name}</strong>
+                    <span>${item.role} · ${item.id === currentCaregiver.id ? "当前登录" : "协作成员"}</span>
+                </div>
+                <div class="medication-detail-actions">
+                    ${item.id === currentCaregiver.id ? "" : `<button type="button" class="ghost-button caregiver-reset-pin" data-id="${item.id}" data-name="${item.name}">重置 PIN</button>`}
+                    ${item.id === "default_caregiver" || item.id === currentCaregiver.id ? "" : `<button type="button" class="ghost-button medication-delete caregiver-delete" data-id="${item.id}" data-name="${item.name}">停用</button>`}
+                </div>
+            </article>
+        `).join("") : `<div class="log-empty"><strong>还没有协作照护者。</strong></div>`;
+
+        list.querySelectorAll(".caregiver-reset-pin").forEach((button) => {
+            button.addEventListener("click", async () => {
+                const newPin = window.prompt(`请输入 ${button.dataset.name} 的新 4 位 PIN`);
+                if (!newPin) return;
+                const response = await fetch(`/api/caregivers/${encodeURIComponent(button.dataset.id)}/pin`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ new_pin: newPin.trim() }),
+                });
+                const data = await response.json();
+                setStatus("team-caregiver-status", response.ok ? "PIN 已重置。" : (data.detail || "重置失败。"));
+            });
+        });
+
+        list.querySelectorAll(".caregiver-delete").forEach((button) => {
+            button.addEventListener("click", async () => {
+                if (!window.confirm(`确认停用 ${button.dataset.name} 的照护者账号？`)) return;
+                const response = await fetch(`/api/caregivers/${encodeURIComponent(button.dataset.id)}`, { method: "DELETE" });
+                const data = await response.json();
+                setStatus("team-caregiver-status", response.ok ? "已停用照护者。" : (data.detail || "停用失败。"));
+                if (response.ok) await loadTeamCaregivers();
+            });
+        });
+    }
+
+    document.getElementById("team-caregiver-form")?.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        setStatus("team-caregiver-status", "正在添加...");
+        const payload = {
+            name: document.getElementById("team-caregiver-name").value.trim(),
+            pin: document.getElementById("team-caregiver-pin").value.trim(),
+            role: document.getElementById("team-caregiver-role").value,
+            patient_id: patientId,
+        };
+        try {
+            const response = await fetch("/api/caregivers", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "新增失败");
+            setStatus("team-caregiver-status", "已新增照护者。");
+            event.currentTarget.reset();
+            await loadTeamCaregivers();
+        } catch (error) {
+            setStatus("team-caregiver-status", error.message || "新增失败。");
+        }
+    });
+
+    loadMedication();
+    loadTeamCaregivers();
+});
+</script>
+{% endblock %}

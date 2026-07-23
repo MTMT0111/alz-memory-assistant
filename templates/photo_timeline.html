@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block page_content %}
+<section class="photo-timeline-shell" data-patient-id="{{ timeline_patient_id }}">
+    <header class="photo-timeline-header">
+        <div>
+            <p class="section-kicker">Family Photo Timeline</p>
+            <h1>{{ patient.name }}家庭记忆相册</h1>
+            <p class="subtitle">按年代浏览照片、故事和照护者录制的语音说明。</p>
+        </div>
+        <div class="photo-timeline-actions">
+            <a class="ghost-button" href="/patients">返回患者列表</a>
+            <a class="ghost-button" href="/reminiscence/{{ timeline_patient_id }}">追忆陪伴</a>
+            <a class="primary-button" href="/materials/{{ timeline_patient_id }}">管理素材</a>
+        </div>
+    </header>
+
+    <nav id="timeline-decade-filter" class="timeline-decade-filter" aria-label="年代筛选">
+        <button type="button" class="active" data-decade="all">全部</button>
+        <button type="button" data-decade="1950s">1950s</button>
+        <button type="button" data-decade="1960s">1960s</button>
+        <button type="button" data-decade="1970s">1970s</button>
+        <button type="button" data-decade="1980s">1980s</button>
+        <button type="button" data-decade="1990s">1990s</button>
+        <button type="button" data-decade="2000s+">2000s+</button>
+    </nav>
+
+    <div id="photo-timeline-status" class="materials-form-status materials-form-status-hidden" aria-live="polite"></div>
+    <section id="photo-timeline-grid" class="photo-timeline-grid" aria-label="家庭记忆照片"></section>
+</section>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const shell = document.querySelector(".photo-timeline-shell");
+    const patientId = shell?.dataset.patientId || "";
+    const grid = document.getElementById("photo-timeline-grid");
+    const status = document.getElementById("photo-timeline-status");
+    const filter = document.getElementById("timeline-decade-filter");
+    let grouped = {};
+    let activeDecade = "all";
+
+    function escapeHtml(value) {
+        return String(value ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\"", "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function showStatus(message, kind = "neutral") {
+        if (!status) return;
+        if (!message) {
+            status.className = "materials-form-status materials-form-status-hidden";
+            status.textContent = "";
+            return;
+        }
+        status.className = `materials-form-status materials-form-status-${kind}`;
+        status.textContent = message;
+    }
+
+    function tagsOf(item) {
+        if (Array.isArray(item.tag_list)) return item.tag_list;
+        const raw = String(item.tags || "").trim();
+        if (!raw) return [];
+        if (raw.startsWith("[")) {
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed)) return parsed;
+            } catch (error) {}
+        }
+        return raw.split(/[,，]/).map((tag) => tag.trim()).filter(Boolean);
+    }
+
+    function visibleItems() {
+        const decades = activeDecade === "all" ? Object.keys(grouped) : [activeDecade];
+        return decades.flatMap((decade) => (grouped[decade] || []).map((item) => ({ ...item, decade })));
+    }
+
+    function photoUrl(item) {
+        return item.thumbnail_url || item.image_url || item.file_path || item.url || "";
+    }
+
+    function conversationUrl(item) {
+        const description = item.description || item.story_text || item.title || "这张照片";
+        const seed = `你看，这是${description}，还记得那时候吗？`;
+        return `/conversation/${encodeURIComponent(patientId)}?seed_message=${encodeURIComponent(seed)}`;
+    }
+
+    function render() {
+        const items = visibleItems();
+        if (!items.length) {
+            grid.innerHTML = `
+                <div class="photo-timeline-empty">
+                    <strong>📷 暂无相册素材</strong>
+                    <span>可以先到素材库补充家庭照片、年份、故事和语音说明。</span>
+                    <a class="ghost-button" href="/materials/${encodeURIComponent(patientId)}">去管理素材</a>
+                </div>
+            `;
+            return;
+        }
+        grid.innerHTML = items.map((item) => `
+            <article class="photo-memory-card">
+                <div class="photo-memory-media">
+                    ${photoUrl(item)
+                        ? `<img src="${escapeHtml(photoUrl(item))}" alt="${escapeHtml(item.title || "家庭照片")}">`
+                        : `<div class="photo-memory-placeholder" aria-hidden="true">${escapeHtml((item.related_person || item.title || "护").slice(0, 1))}</div>`}
+                    <span class="photo-year-badge">${escapeHtml(item.photo_year || item.decade || "未填年份")}</span>
+                </div>
+                <div class="photo-memory-body">
+                    <h2>${escapeHtml(item.title || "未命名照片")}</h2>
+                    <p class="photo-memory-person">${escapeHtml(item.related_person || "家庭成员")} · ${escapeHtml(item.material_type || "素材")}</p>
+                    <details>
+                        <summary>查看照片故事</summary>
+                        <p>${escapeHtml(item.story_text || item.description || "这张照片还没有补充故事。")}</p>
+                    </details>
+                    ${tagsOf(item).length ? `<div class="material-tag-row">${tagsOf(item).map((tag) => `<span class="app-inline-pill">${escapeHtml(tag)}</span>`).join("")}</div>` : ""}
+                    <div class="photo-memory-buttons">
+                        ${item.voice_note_path ? `<button type="button" class="ghost-button timeline-play-voice" data-path="${escapeHtml(item.voice_note_path)}">🔊 播放语音说明</button>` : ""}
+                        <a class="primary-button" href="${conversationUrl(item)}">💬 和老人聊聊这张照片</a>
+                    </div>
+                </div>
+            </article>
+        `).join("");
+        grid.querySelectorAll(".timeline-play-voice").forEach((button) => {
+            button.addEventListener("click", () => {
+                const path = button.dataset.path || "";
+                if (path) new Audio(path).play().catch(() => showStatus("语音说明播放失败。", "warning"));
+            });
+        });
+    }
+
+    filter?.querySelectorAll("button").forEach((button) => {
+        button.addEventListener("click", () => {
+            activeDecade = button.dataset.decade || "all";
+            filter.querySelectorAll("button").forEach((item) => item.classList.toggle("active", item === button));
+            render();
+        });
+    });
+
+    async function loadTimeline() {
+        try {
+            showStatus("正在加载家庭记忆相册...", "neutral");
+            const response = await fetch(`/api/materials/${encodeURIComponent(patientId)}/timeline`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.detail || "相册加载失败");
+            grouped = data || {};
+            showStatus("", "neutral");
+            render();
+        } catch (error) {
+            showStatus(error.message || "相册加载失败。", "warning");
+            grouped = {};
+            render();
+        }
+    }
+
+    loadTimeline();
+});
+</script>
+{% endblock %}
