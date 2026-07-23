@@ -1,7 +1,7 @@
 /* Conversation voice helpers for the Alzheimer companion device page.
  * Voice MVP chain:
  * idle -> listening -> thinking -> speaking -> idle
- * MediaRecorder -> /voice/transcribe -> /chat -> /voice/speak -> audio playback
+ * MediaRecorder -> /api/stt -> /chat -> /api/tts -> audio playback
  */
 
 (function initConversationVoice() {
@@ -9,7 +9,7 @@
         return;
     }
 
-    const voiceButton = document.getElementById("voice-button");
+    const voiceButton = document.getElementById("mic-btn") || document.getElementById("voice-button");
     const stopSpeakingButton = document.getElementById("stop-speaking-button");
     const input = document.getElementById("input");
     const statusText = document.getElementById("chat-status-text");
@@ -17,6 +17,7 @@
     const helpText = document.getElementById("composer-help-text");
     const ttsToggle = document.getElementById("tts-enabled-toggle");
     const ttsFallbackStatus = document.getElementById("tts-fallback-status");
+    const ttsPlayingIndicator = document.getElementById("tts-playing-indicator");
     const stripState = document.getElementById("voice-strip-state");
     const stripStep = document.getElementById("voice-strip-step");
     const stripPlaying = document.getElementById("voice-strip-playing");
@@ -440,6 +441,9 @@
         dockStatus.dataset.step = nextStep;
         statusText.textContent = text || substageTextMap[nextStep] || stateTextMap[nextState];
         stopSpeakingButton.disabled = nextState !== "speaking";
+        if (ttsPlayingIndicator) {
+            ttsPlayingIndicator.hidden = nextState !== "speaking";
+        }
         voiceButton.classList.toggle("is-listening", nextState === "listening");
         voiceButton.setAttribute("aria-pressed", nextState === "listening" ? "true" : "false");
         setHelpText(help, helpKind);
@@ -645,10 +649,10 @@
             const data = await response.json();
             return {
                 success: false,
-                stage: String(data?.stage || "").trim(),
+                stage: String(data?.stage || "transcribe").trim(),
                 error_code: String(data?.error_code || "").trim(),
-                user_friendly_message: String(data?.user_friendly_message || data?.detail || fallbackMessage).trim(),
-                debug_message: String(data?.debug_message || data?.error_message || data?.detail || fallbackMessage).trim(),
+                user_friendly_message: String(data?.user_friendly_message || data?.error || data?.detail || fallbackMessage).trim(),
+                debug_message: String(data?.debug_message || data?.error_message || data?.error || data?.detail || fallbackMessage).trim(),
                 latency_ms: data?.latency_ms ?? null,
                 provider: String(data?.provider || "").trim(),
                 model: String(data?.model || "").trim(),
@@ -740,7 +744,7 @@
 
         utterance.addEventListener("start", () => {
             playbackStartedAt = window.performance?.now?.() || Date.now();
-            setPhase("speaking", "playing_audio", "我在说", "当前使用浏览器朗读。");
+            setPhase("speaking", "playing_audio", "🔊 播放中...", "当前使用浏览器朗读。");
         });
         utterance.addEventListener("end", () => {
             debugState.metrics.playback_duration_ms = playbackStartedAt > 0
@@ -799,20 +803,22 @@
         emitDebugEvent("tts_request_start", cleanReply.slice(0, 36));
 
         try {
-            const response = await fetch("/api/tts/speak", {
+            const ttsStartedAt = window.performance?.now?.() || Date.now();
+            const response = await fetch("/api/tts", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ text: cleanReply, provider: "minimax" })
+                body: JSON.stringify({ text: cleanReply })
             });
             const payload = await response.json();
+            debugState.metrics.tts_latency_ms = Math.max(0, Math.round((window.performance?.now?.() || Date.now()) - ttsStartedAt));
 
-            if (!response.ok || !payload.success) {
-                debugState.tts_provider = payload?.provider || "minimax";
-                debugState.tts_model = payload?.model || debugState.tts_model;
+            if (!response.ok || payload?.fallback) {
+                debugState.tts_provider = "browser_tts";
+                debugState.tts_model = "speechSynthesis";
                 debugState.tts_error_code = "TTS_FALLBACK";
-                if (speakWithBrowserFallback(payload?.clean_text || cleanReply)) {
+                if (speakWithBrowserFallback(payload?.text || cleanReply)) {
                     return;
                 }
                 const detail = payload?.reason || "语音播报暂时还没准备好，文字聊天不受影响。";
@@ -821,11 +827,11 @@
                 return;
             }
 
-            if (!payload.audio_url) {
-                if (speakWithBrowserFallback(payload.clean_text || cleanReply)) {
+            if (!payload.audio_base64) {
+                if (speakWithBrowserFallback(payload.text || cleanReply)) {
                     return;
                 }
-                setPhase("idle", "idle", "这次先用文字陪你。", "没有拿到语音地址，先继续文字聊天。", "warning");
+                setPhase("idle", "idle", "这次先用文字陪你。", "没有拿到语音数据，先继续文字聊天。", "warning");
                 scheduleRestore();
                 return;
             }
@@ -833,14 +839,13 @@
             backendStatus = "ready";
             debugState.error_code = "";
             debugState.error_message = "";
-            debugState.fallback_used = Boolean(payload.fallback_to_browser_tts);
-            debugState.tts_provider = payload.provider || "minimax";
-            debugState.tts_model = payload.model || "";
+            debugState.fallback_used = false;
+            debugState.tts_provider = "minimax";
+            debugState.tts_model = "t2a_v2";
             debugState.tts_error_code = "";
-            debugState.metrics.tts_latency_ms = Number(payload.latency_ms) || null;
             updateTtsFallbackStatus("MiniMax TTS 已朗读");
-            currentAudioUrl = payload.audio_url;
-            const audio = new Audio(payload.audio_url);
+            currentAudioUrl = `data:audio/mp3;base64,${payload.audio_base64}`;
+            const audio = new Audio(currentAudioUrl);
             currentAudio = audio;
 
             audio.addEventListener("playing", () => {
@@ -848,7 +853,7 @@
                     return;
                 }
                 playbackStartedAt = window.performance?.now?.() || Date.now();
-                setPhase("speaking", "playing_audio", "我在说", "当前使用 MiniMax TTS。");
+                setPhase("speaking", "playing_audio", "🔊 播放中...", "当前使用 MiniMax TTS。");
                 emitDebugEvent("playback_started");
             });
 
@@ -877,7 +882,7 @@
                 debugState.error_message = "Audio playback error in browser";
                 debugState.tts_error_code = "VOICE_TTS_FAILED";
                 debugState.final_status = "playback_error";
-                if (!speakWithBrowserFallback(payload.clean_text || cleanReply)) {
+                if (!speakWithBrowserFallback(payload.text || cleanReply)) {
                     finalizeTurnMetrics();
                     setPhase("idle", "idle", "这次没有顺利读出来", "文字聊天不受影响，我们还可以继续。", "warning");
                     scheduleRestore();
@@ -918,13 +923,12 @@
         emitDebugEvent("upload_start", `${audioBlob.type || "audio/webm"} ${audioBlob.size} bytes`);
 
         try {
-            const response = await fetch("/voice/transcribe", {
+            const formData = new FormData();
+            formData.append("audio", audioBlob, filename);
+            const sttStartedAt = window.performance?.now?.() || Date.now();
+            const response = await fetch("/api/stt", {
                 method: "POST",
-                headers: {
-                    "Content-Type": audioBlob.type || "audio/webm",
-                    "X-Audio-Filename": filename
-                },
-                body: audioBlob
+                body: formData
             });
 
             if (!response.ok) {
@@ -942,13 +946,13 @@
             debugState.last_transcript = transcript;
             debugState.error_code = String(data?.error_code || "").trim();
             debugState.error_message = "";
-            debugState.fallback_used = Boolean(data?.fallback_used);
-            debugState.asr_provider = String(data?.provider || "").trim();
-            debugState.asr_model = String(data?.model || "").trim();
+            debugState.fallback_used = false;
+            debugState.asr_provider = "openai";
+            debugState.asr_model = "whisper-1";
             debugState.transcribe_error_code = String(data?.error_code || "").trim();
             debugState.transcribe_confidence = data?.confidence ?? null;
             applyVoiceDiagnosis("transcribe", data?.diagnosis);
-            debugState.metrics.transcribe_latency_ms = data?.latency_ms ?? null;
+            debugState.metrics.transcribe_latency_ms = Math.max(0, Math.round((window.performance?.now?.() || Date.now()) - sttStartedAt));
             renderDebugPanel();
 
             if (!transcript) {
@@ -1158,10 +1162,10 @@
     setPhase("idle", "idle", "陪伴中", defaultHelpText);
     if (ttsToggle) {
         ttsToggle.checked = readTtsEnabled();
-        updateTtsFallbackStatus(ttsToggle.checked ? "语音朗读：浏览器朗读 / MiniMax TTS 待接入" : "语音朗读已关闭");
+        updateTtsFallbackStatus(ttsToggle.checked ? "语音朗读：浏览器朗读 / MiniMax TTS" : "语音朗读已关闭");
         ttsToggle.addEventListener("change", () => {
             window.localStorage.setItem("conversation_tts_enabled", String(ttsToggle.checked));
-            updateTtsFallbackStatus(ttsToggle.checked ? "语音朗读：浏览器朗读 / MiniMax TTS 待接入" : "语音朗读已关闭");
+            updateTtsFallbackStatus(ttsToggle.checked ? "语音朗读：浏览器朗读 / MiniMax TTS" : "语音朗读已关闭");
             if (!ttsToggle.checked) {
                 stopSpeaking({ silent: true });
             }

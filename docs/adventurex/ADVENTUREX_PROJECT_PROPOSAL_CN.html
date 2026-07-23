@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>AdventureX Project Proposal</title>
+  <link rel="stylesheet" href="assets/proposal.css">
+</head>
+<body>
+<div class="container">
+  <section class="cover">
+    <div>
+      <div class="cover-kicker">AdventureX Five-Day Build Proposal</div>
+      <h1>AdventureX Project Proposal</h1>
+      <h2>Alzheimer Family Care Assistant</h2>
+      <h3>面向阿尔兹海默症家庭的照护闭环与情感记忆陪伴系统</h3>
+      <p class="tagline"><strong>From General-Purpose LLMs to Family-Grounded Care Intelligence</strong></p>
+      <div class="meta-grid">
+        <div class="meta-card"><strong>当前版本</strong><br>v0.5（已审计仓库快照）</div>
+        <div class="meta-card"><strong>GitHub</strong><br><strong>[GITHUB URL]</strong></div>
+        <div class="meta-card"><strong>申请人</strong><br><strong>[APPLICANT NAME]</strong></div>
+        <div class="meta-card"><strong>联系方式</strong><br><strong>[EMAIL]</strong> / <strong>[PHONE]</strong></div>
+      </div>
+    </div>
+    <div class="footer">将结构化照护状态、个人情感记忆和安全受控对话连接起来，为患者提供熟悉感，为家属提供可行动的照护支持。<br>AdventureX · 2026-07-17</div>
+  </section>
+
+  <section class="section page-break">
+    <div class="headerline"><h2>1. Executive Summary</h2><div class="small">审计版本：v0.5</div></div>
+    <p>阿尔兹海默症家庭照护不是一个“更会聊天”的问题，而是一个如何让患者获得熟悉感、让家属获得行动支持的问题。通用大模型可以生成语言，但不能天然承担家庭照护责任。</p>
+    <p>本项目提出 <strong>Care Loop + Emotional Memory Companion</strong>：患者端通过家庭照片、故事、语音留言和熟悉素材进入温和对话；家属端通过 reminder、daily care、risk events、memory review 与 webhook 通知形成照护闭环。</p>
+    <p>当前仓库快照已具备可运行原型：FastAPI + SQLite、多患者管理、DeepSeek 主链路、规则安全层、患者对话页、家属工作台、materials、photo timeline、reminiscence、memory candidate、consent、TTS fallback 与内部评估页面。最新 committed 结果显示，在 10 个内部场景中，baseline 为 <strong>5.60</strong>，完整照护系统链路为 <strong>8.13</strong>，提升 <strong>+2.53</strong>。这不是临床验证，但说明“结构化照护状态 + 安全控制 + 家庭记忆 grounding”比直接 LLM 对话更接近目标场景。</p>
+  </section>
+
+  <section class="section">
+    <h2>2. The Problem: Care Is More Than Conversation</h2>
+    <div class="twocol">
+      <div class="panel">
+        <h3>患者侧</h3>
+        <ul>
+          <li>重复提问与记忆下降</li>
+          <li>日期和位置困惑</li>
+          <li>焦虑与不安全感</li>
+          <li>敏感亲人话题</li>
+          <li>需要熟悉、温和、非考试式交流</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>家属侧</h3>
+        <ul>
+          <li>反复解释</li>
+          <li>用药和作息管理</li>
+          <li>外出与走失风险</li>
+          <li>无法持续陪伴</li>
+          <li>难以及时了解患者状态</li>
+        </ul>
+      </div>
+    </div>
+    <blockquote>家庭真正需要的不是一个会聊天的 AI，而是一个既理解患者熟悉世界、又能进入家属照护流程的辅助系统。</blockquote>
+  </section>
+
+  <section class="section">
+    <h2>3. User and Scenario Definition</h2>
+    <div class="panel">
+      <p><strong>患者：</strong>中度认知障碍或阿尔兹海默症患者，需要语音优先、低认知负担交互，需要熟悉人物和故事，不能承受刺激性纠正和复杂指令。</p>
+      <p><strong>家庭照护者：</strong>需要管理提醒和风险，需要掌握最近交流情况，需要审核长期记忆，不能把照护责任完全交给 AI。</p>
+      <p><strong>Core Scenario：</strong>“李奶奶看到年轻时的家庭照片，想起过去；对话中又问自己是否吃过药，并提出想独自外出。系统如何在情感陪伴和照护安全之间切换？”</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>4. Insight and Design Principles</h2>
+    <div class="threecol">
+      <div class="panel"><h3>1. Familiarity before intelligence</h3></div>
+      <div class="panel"><h3>2. Support, not examination</h3></div>
+      <div class="panel"><h3>3. Structured facts before generated claims</h3></div>
+      <div class="panel"><h3>4. Caregiver control over long-term memory</h3></div>
+      <div class="panel"><h3>5. Human escalation for high-risk situations</h3></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2>5. Proposed Solution</h2>
+    <div class="figure"><img src="assets/care_memory_loop.svg" alt="care loop"></div>
+  </section>
+
+  <section class="section">
+    <h2>6. Current Prototype and Evidence of Execution</h2>
+    <table>
+      <thead><tr><th>System Capability</th><th>Current Status</th><th>Implementation Evidence</th><th>Next Step</th></tr></thead>
+      <tbody>
+        <tr><td>多患者管理</td><td><span class="badge ok">已实现</span></td><td><code>patients.html</code> / <code>patient_service.py</code></td><td>统一 legacy path</td></tr>
+        <tr><td>DeepSeek 对话</td><td><span class="badge ok">已实现</span></td><td><code>llm_service.py</code> / committed JSON results</td><td>环境下再次验证</td></tr>
+        <tr><td>家属 dashboard</td><td><span class="badge ok">已实现</span></td><td><code>index.html</code></td><td>聚焦 Hero Demo</td></tr>
+        <tr><td>Materials / Photo Timeline</td><td><span class="badge ok">已实现</span></td><td><code>materials.html</code> / <code>photo_timeline.html</code></td><td>story-driven flow</td></tr>
+        <tr><td>Memory candidate / review</td><td><span class="badge partial">部分实现</span></td><td><code>memory_candidate_service.py</code></td><td>统一 review UX</td></tr>
+        <tr><td>TTS / notification / PWA</td><td><span class="badge partial">部分实现</span></td><td><code>tts_service.py</code> / <code>notify_service.py</code> / <code>manifest.json</code></td><td>保守定位为 demo-ready scaffolding</td></tr>
+      </tbody>
+    </table>
+    <div class="placeholder">[PLACEHOLDER: current patients page screenshot]</div>
+    <div class="placeholder">[PLACEHOLDER: current conversation page screenshot]</div>
+    <div class="placeholder">[PLACEHOLDER: current caregiver dashboard screenshot]</div>
+  </section>
+
+  <section class="section">
+    <h2>7. Technical Architecture</h2>
+    <div class="figure"><img src="assets/system_architecture.svg" alt="architecture"></div>
+    <p>LLM 只负责候选自然语言生成；结构化照护事实来自数据库和规则层；长期记忆写入必须经过 caregiver approval。</p>
+  </section>
+
+  <section class="section">
+    <h2>8. Technical Differentiation</h2>
+    <table>
+      <thead><tr><th>Dimension</th><th>Direct LLM Chatbot</th><th>This System</th></tr></thead>
+      <tbody>
+        <tr><td>Patient context</td><td>Temporary prompt</td><td>Structured patient profile and materials</td></tr>
+        <tr><td>Medication facts</td><td>May hallucinate</td><td>Grounded in reminder records</td></tr>
+        <tr><td>High-risk dialogue</td><td>Model-dependent</td><td>Rule guard and template fallback</td></tr>
+        <tr><td>Family involvement</td><td>None</td><td>Caregiver dashboard and review</td></tr>
+        <tr><td>Long-term memory</td><td>Automatic or absent</td><td>Caregiver-governed</td></tr>
+        <tr><td>Emotional grounding</td><td>Generic empathy</td><td>Family photos, voices and stories</td></tr>
+        <tr><td>Evaluation</td><td>Subjective demo</td><td>Scenario-based controlled comparison</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="section">
+    <h2>9. Evaluation and Current Results</h2>
+    <div class="figure"><img src="assets/evaluation_comparison.svg" alt="evaluation"></div>
+    <div class="stat-row">
+      <div class="stat"><strong>Baseline</strong><div class="value">5.60</div></div>
+      <div class="stat"><strong>Care system</strong><div class="value">8.13</div></div>
+      <div class="stat"><strong>Improvement</strong><div class="value">+2.53</div></div>
+    </div>
+    <p>这些数字来自 committed JSON report，仅代表项目内部场景评估，而不是临床评价或真实患者有效性验证。</p>
+  </section>
+
+  <section class="section">
+    <h2>10. Why AdventureX and Why Now</h2>
+    <p>我申请 AdventureX，不是为了在五天里提出一个概念，而是为了让一个已经运行的系统完成从“技术原型”到“可被真实家庭理解和试用的 MVP”的跃迁。</p>
+  </section>
+
+  <section class="section">
+    <h2>11. Five-Day Execution Plan</h2>
+    <div class="figure"><img src="assets/five_day_roadmap.svg" alt="roadmap"></div>
+  </section>
+
+  <section class="section">
+    <h2>12. Success Metrics / 13. Deliverables / 14. Risks</h2>
+    <p>成功指标围绕 reliability、user flow、safety、usability 展开；核心交付聚焦单一 Hero Demo；主要风险包括 LLM instability、TTS 环境依赖、真实用户招募与 scope expansion。</p>
+  </section>
+
+  <section class="section">
+    <h2>15. Founder / Builder Fit</h2>
+    <p>我已经持续构建和迭代这个系统，而不是停留在想法阶段。我擅长把复杂功能拆成可验证闭环，这正是这个项目最需要的能力。</p>
+  </section>
+
+  <section class="section">
+    <h2>16. Long-Term Vision</h2>
+    <p>Near-term：真实小样本测试、家庭记忆相册、声音陪伴、日常照护台账、隐私和授权。Mid-term：多家庭部署、更稳定的个性化检索、情绪与风险趋势。明确边界：不替代医生，不独立作医疗决策，不把情感陪伴等同于治疗。</p>
+  </section>
+
+  <section class="section">
+    <h2>17. Conclusion</h2>
+    <blockquote>这不是一个从概念开始的五天项目，而是一个已经具备技术基础、用户问题和验证框架的系统。AdventureX 的价值，是让它在五天内完成一次关键跃迁。</blockquote>
+  </section>
+</div>
+</body>
+</html>

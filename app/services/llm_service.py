@@ -11,17 +11,19 @@ The rest of the app should not need to care which provider is active.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 from datetime import datetime
 import logging
 import os
 import re
+import threading
 from typing import Any, Protocol, Sequence
 
 from app.config import load_local_env_file
 from app.models.chat_log import ChatLog
 from app.models.user_profile import UserProfile
-from app.services import conversation_style_engine
+from app.services import conversation_style_engine, hallucination_guard, local_llm_service, memory_vector_service
 
 try:
     from openai import OpenAI
@@ -40,12 +42,14 @@ DEFAULT_PROVIDER_BASE_URLS = {
     "deepseek": "https://api.deepseek.com/v1",
     "minimax": "https://api.minimax.io/v1",
     "openai": "https://api.openai.com/v1",
+    "ollama": "http://localhost:11434",
 }
 DEFAULT_PROVIDER_MODELS = {
     "zhipu": "glm-4",
     "deepseek": "deepseek-v4-flash",
     "minimax": "MiniMax-M2.7",
     "openai": "gpt-4o-mini",
+    "ollama": "qwen2.5:3b",
 }
 
 # Output and timeout settings (configurable via environment variables)
@@ -135,6 +139,7 @@ class LLMConversationInput:
     context_text: str
     memory_summary: str = ""
     last_reply: str = ""
+    patient_id: str = ""
     style_state: conversation_style_engine.ConversationState | None = None
     style_strategy: conversation_style_engine.Strategy | None = None
 
@@ -186,6 +191,8 @@ class LLMReplyResult:
     safe_template_reply: str = ""
     template_used: bool = False
     template_name: str = ""
+    _hallucination_warning: bool = False
+    hallucination_flagged_phrases: list[str] | None = None
 
 
 class LLMService(Protocol):
@@ -310,6 +317,125 @@ def _memory_summary_text(summary: str) -> str:
     return "\n".join(f"- {line}" for line in compact_lines)
 
 
+def _run_async_memory_search(query: str, patient_id: str) -> list[dict]:
+    """在同步 LLM 构建路径里安全调用异步向量检索，不改 chat_service。"""
+    coroutine = memory_vector_service.search_memory(query=query, patient_id=patient_id, top_k=4)
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coroutine)
+
+    result_box: dict[str, Any] = {}
+
+    def _runner() -> None:
+        try:
+            result_box["value"] = asyncio.run(coroutine)
+        except Exception as exc:  # pragma: no cover - depends on vector runtime state
+            result_box["error"] = exc
+
+    thread = threading.Thread(target=_runner, daemon=True)
+    thread.start()
+    thread.join()
+    if "error" in result_box:
+        raise result_box["error"]
+    return list(result_box.get("value") or [])
+
+
+def _run_async_value(coroutine):
+    """在同步上下文中安全执行一个 async 协程。"""
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coroutine)
+
+    result_box: dict[str, Any] = {}
+
+    def _runner() -> None:
+        try:
+            result_box["value"] = asyncio.run(coroutine)
+        except Exception as exc:  # pragma: no cover - 取决于本地/网络状态
+            result_box["error"] = exc
+
+    thread = threading.Thread(target=_runner, daemon=True)
+    thread.start()
+    thread.join()
+    if "error" in result_box:
+        raise result_box["error"]
+    return result_box.get("value")
+
+
+def _confirmed_memory_empty_block() -> str:
+    """没有已确认记忆时，明确限制模型不要主动编造往事。"""
+    return "\n".join(
+        [
+            "【已确认记忆】",
+            "暂无已确认记忆，请不要主动提及患者的具体往事，专注于当下的温和陪伴对话。",
+            "【已确认记忆结束】",
+        ]
+    )
+
+
+def _format_confirmed_memory_block(memory_texts: Sequence[str]) -> str:
+    """把已确认记忆包装成硬边界格式，提醒模型只能引用这些内容。"""
+    clean_texts = [str(text or "").strip() for text in memory_texts if str(text or "").strip()]
+    if not clean_texts:
+        return _confirmed_memory_empty_block()
+    lines = ["【已确认记忆 - 仅可引用以下内容，不可捏造其他信息】"]
+    for index, text in enumerate(clean_texts[:4], start=1):
+        lines.append(f"{index}. {text[:120]}")
+    lines.append("【已确认记忆结束】")
+    return "\n".join(lines)
+
+
+def _fallback_memory_texts(summary: str) -> list[str]:
+    """向量检索失败时复用原长期摘要逻辑，保持旧链路可用。"""
+    fallback_text = _memory_summary_text(summary)
+    return [
+        line.strip().lstrip("-").strip()
+        for line in fallback_text.splitlines()
+        if line.strip() and "暂无稳定的长期记忆摘要" not in line
+    ][:4]
+
+
+def _approved_memory_texts(conversation: LLMConversationInput) -> list[str]:
+    """优先返回语义 top-4 已确认记忆；失败时返回原摘要 fallback 文本。"""
+    patient_id = str(conversation.patient_id or getattr(conversation.profile, "id", "") or "")
+    try:
+        memories = _run_async_memory_search(conversation.user_message, patient_id)
+    except Exception:
+        LOGGER.warning("[MEMORY] vector search failed, fallback to full load")
+        return _fallback_memory_texts(conversation.memory_summary)
+
+    sorted_memories = sorted(
+        memories,
+        key=lambda item: float(item.get("score") or 0),
+        reverse=True,
+    )[:4]
+    return [
+        str(item.get("text") or "").strip()
+        for item in sorted_memories
+        if str(item.get("text") or "").strip()
+    ]
+
+
+def _semantic_memory_text(conversation: LLMConversationInput) -> str:
+    """返回带硬边界标签的已确认记忆块。"""
+    return _format_confirmed_memory_block(_approved_memory_texts(conversation))
+
+
+def _check_hallucination_warning(reply: str, conversation: LLMConversationInput) -> dict[str, Any]:
+    """对最终回复做轻量记忆幻觉检查；失败不影响主链路。"""
+    try:
+        result = hallucination_guard.check_memory_leak(reply, _approved_memory_texts(conversation))
+    except Exception:
+        return {"suspicious": False, "flagged_phrases": []}
+    if result.get("suspicious"):
+        flagged = list(result.get("flagged_phrases") or [])
+        LOGGER.warning("[GUARD] 疑似幻觉，flagged: %s", flagged)
+        return {"suspicious": True, "flagged_phrases": flagged}
+    return {"suspicious": False, "flagged_phrases": []}
+
+
 def _build_state_tags(resolved: ResolvedStyleContext) -> list[str]:
     """Convert the lightweight state detection into prompt-friendly labels."""
     state = resolved.state
@@ -351,6 +477,27 @@ def _build_real_system_prompt(
 ) -> str:
     """Build a short system prompt with only the key companion boundaries."""
     state_tags = _build_state_tags(resolved)
+    profile = conversation.profile
+    profile_name = str(getattr(profile, "name", "") or "").strip()
+    patient_id = str(conversation.patient_id or getattr(profile, "id", "") or "")
+    is_demo_profile = patient_id == "demo_patient_001"
+    patient_rule = (
+        [
+            "Demo 患者规则：你正在和 78 岁的李桂兰（李奶奶）说话。",
+            "她常问女儿小雨什么时候回来；小雨晚上 8 点左右会联系她。",
+            "遇到“我要回家/这里是哪里/想出去”：先安抚，再提醒联系小雨或在安全地方等一下。",
+            "遇到“老王怎么还没回来”：不要说老王已经去世；说“你有点想老王了。我们先坐一会儿，我陪你听一首熟悉的老歌，好吗？”",
+            "遇到吃药不确定：不要说已吃或没吃；说一起请小雨确认。",
+        ]
+        if is_demo_profile
+        else [
+            f"当前患者：{profile_name or '患者'}。",
+            "不要套用任何 Demo 患者姓名、家属姓名、往事或生活习惯。",
+            "只有当下方资料明确出现时，才可提及患者的具体家人、地点、经历或喜好。",
+            "遇到“我要回家/这里是哪里/想出去”：先安抚，再建议联系照护者或在安全地方等一下。",
+            "遇到吃药不确定：不要说已吃或没吃；说一起请照护者确认。",
+        ]
+    )
     return "\n".join(
         [
             "你在和一位可能存在记忆困扰的老人聊天。",
@@ -363,16 +510,22 @@ def _build_real_system_prompt(
             "遇到吃药不确定：不要判断吃没吃过，先说一起确认提醒或药盒，并建议请家人核对。",
             "遇到害怕、想回家、位置困惑、外出意图、怀疑被偷：先安抚，再确认安全或联系家人；不要反驳或争辩。",
             "遇到人物识别困难：不要考记忆，不确定就说明一起看照片或请家人确认。",
-            "Demo 患者规则：你正在和 78 岁的李桂兰（李奶奶）说话。",
-            "她常问女儿小雨什么时候回来；小雨晚上 8 点左右会联系她。",
+            "\n".join(patient_rule),
             "不要说“作为AI模型”，不要说“你刚刚问过”，不要说“你忘了”。",
-            "遇到“我要回家/这里是哪里/想出去”：先安抚，再提醒联系小雨或在安全地方等一下。",
-            "遇到“老王怎么还没回来”：不要说老王已经去世；说“你有点想老王了。我们先坐一会儿，我陪你听一首熟悉的老歌，好吗？”",
-            "遇到吃药不确定：不要说已吃或没吃；说一起请小雨确认。",
-            "遇到“这个人是谁”：没有图片上下文就不要编造，说现在看不到照片，可以请小雨确认。",
+            "遇到“这个人是谁”：没有图片上下文就不要编造，说现在看不到照片，可以请照护者确认。",
             "遇到“我刚刚是不是问过你”：说没关系，可以再陪她说一遍。",
             "输出中文，通常 1 到 3 句，简短、自然、有陪伴感。",
             conversation.system_prompt.strip(),
+            "\n".join(
+                [
+                    "【记忆使用规则 - 必须严格遵守】",
+                    "1. 你只能引用下方\"已确认记忆\"列表中明确存在的内容",
+                    "2. 禁止自行编造、推测或补充任何关于患者的事实（包括人名、地点、经历、喜好）",
+                    "3. 如果患者提到的内容不在已确认记忆中，你应该说：\"我记得的不太清楚，能告诉我更多吗？\"",
+                    "4. 禁止说\"我记得你说过...\"，除非该内容确实在已确认记忆列表中",
+                    "5. 已确认记忆是照护者审批过的，你可以信任这些内容",
+                ]
+            ),
             f"状态标签：{', '.join(state_tags)}",
         ]
     )
@@ -390,7 +543,7 @@ def _build_real_llm_messages(
             "【这个人的简短情况】",
             _profile_text(conversation.profile),
             "【可参考的长期线索】",
-            _memory_summary_text(conversation.memory_summary),
+            _semantic_memory_text(conversation),
             "【最近几句对话】",
             _history_text(conversation.recent_logs),
             "【当前用户消息｜优先回应这一句】",
@@ -809,7 +962,7 @@ def _normalize_provider_name(provider: str) -> str:
     normalized = str(provider or "").strip().lower()
     if normalized in {"", "auto"}:
         return DEFAULT_PROVIDER
-    if normalized not in {"zhipu", "deepseek", "minimax", "openai", "mock"}:
+    if normalized not in {"zhipu", "deepseek", "minimax", "openai", "ollama", "mock"}:
         LOGGER.warning("unknown LLM_PROVIDER '%s', fallback to mock provider", provider)
         return "mock"
     return normalized
@@ -820,6 +973,15 @@ def _resolve_provider_config(provider_override: str | None = None) -> ProviderCo
     provider = _normalize_provider_name(provider_override or os.getenv("LLM_PROVIDER", DEFAULT_PROVIDER))
     if provider == "mock":
         return ProviderConfig(provider="mock", model="mock")
+
+    if provider == "ollama":
+        runtime = local_llm_service.get_runtime_config()
+        return ProviderConfig(
+            provider="ollama",
+            api_key="local",
+            base_url=str(runtime.get("base_url") or DEFAULT_PROVIDER_BASE_URLS["ollama"]),
+            model=str(runtime.get("model") or DEFAULT_PROVIDER_MODELS["ollama"]),
+        )
 
     if provider == "zhipu":
         return ProviderConfig(
@@ -853,9 +1015,45 @@ def _resolve_provider_config(provider_override: str | None = None) -> ProviderCo
     )
 
 
+def _provider_priority(provider_override: str | None = None) -> list[str]:
+    """构造 provider 优先级；开启本地优先时把 ollama 放最前。"""
+    requested = _normalize_provider_name(provider_override or os.getenv("LLM_PROVIDER", DEFAULT_PROVIDER))
+    ordered: list[str] = []
+    if local_llm_service.is_local_enabled():
+        ordered.append("ollama")
+    ordered.append(requested)
+    ordered.extend(["deepseek", "minimax", "zhipu", "openai"])
+    if requested == "mock":
+        ordered.append("mock")
+
+    unique: list[str] = []
+    for provider in ordered:
+        normalized = _normalize_provider_name(provider)
+        if normalized in unique:
+            continue
+        unique.append(normalized)
+    return unique
+
+
 def get_provider_availability(provider_override: str | None = None) -> ProviderAvailability:
     """Return whether one provider is ready for real requests in this environment."""
     config = _resolve_provider_config(provider_override)
+    if config.provider == "ollama":
+        available = False
+        reason = "ollama unavailable"
+        try:
+            available = bool(_run_async_value(local_llm_service.is_ollama_available()))
+            reason = "configured" if available else "ollama unavailable"
+        except Exception as exc:
+            reason = f"ollama check failed: {type(exc).__name__}"
+        return ProviderAvailability(
+            provider="ollama",
+            available=available,
+            reason=reason,
+            model=config.model,
+            base_url=config.base_url,
+        )
+
     if config.provider == "mock":
         return ProviderAvailability(
             provider="mock",
@@ -906,7 +1104,28 @@ def get_llm_runtime_status(provider_override: str | None = None) -> dict[str, An
         "fallback_enabled": LLM_ENABLE_FALLBACK,
         "timeout_seconds": LLM_TIMEOUT_SECONDS,
         "max_output_chars": MAX_REPLY_CHARS,
+        "local_enabled": local_llm_service.is_local_enabled(),
     }
+
+
+def get_provider_statuses() -> list[dict[str, Any]]:
+    """给设置页返回各 provider 的可用性与 key 配置状态。"""
+    providers = ["ollama", "deepseek", "minimax", "zhipu", "openai", "mock"]
+    items: list[dict[str, Any]] = []
+    for provider in providers:
+        availability = get_provider_availability(provider)
+        config = _resolve_provider_config(provider)
+        items.append(
+            {
+                "provider": provider,
+                "available": availability.available,
+                "reason": availability.reason,
+                "model": config.model,
+                "base_url": config.base_url,
+                "configured": provider in {"ollama", "mock"} or bool(config.api_key),
+            }
+        )
+    return items
 
 
 def log_llm_runtime_config_once(provider_override: str | None = None, *, force: bool = False) -> None:
@@ -926,6 +1145,76 @@ def log_llm_runtime_config_once(provider_override: str | None = None, *, force: 
         status["max_output_chars"],
     )
     _LLM_CONFIG_LOGGED = True
+
+
+def _blocking_provider_chat(
+    config: ProviderConfig,
+    system_prompt: str,
+    user_message: str,
+    max_tokens: int,
+) -> str:
+    """同步调用 OpenAI 兼容 provider，供 async helper 包装复用。"""
+    if OpenAI is None:
+        raise RuntimeError("openai SDK unavailable")
+    if not config.api_key:
+        raise RuntimeError(f"{config.provider} API key missing")
+    client = OpenAI(api_key=config.api_key, base_url=config.base_url)
+    response = client.chat.completions.create(
+        model=config.model,
+        messages=[
+            {"role": "system", "content": str(system_prompt or "").strip()},
+            {"role": "user", "content": str(user_message or "").strip()},
+        ],
+        temperature=0.7,
+        max_tokens=max(1, int(max_tokens or 300)),
+        timeout=LLM_TIMEOUT_SECONDS,
+    )
+    reply = _extract_response_text(response)
+    if not reply:
+        raise RuntimeError(f"{config.provider} empty response")
+    return reply
+
+
+async def chat(
+    system_prompt: str,
+    user_message: str,
+    max_tokens: int = 300,
+    *,
+    provider_override: str | None = None,
+) -> str:
+    """统一的轻量聊天入口，供 emotion/quality/risk 等辅助服务复用。"""
+    last_error: str = "no provider attempted"
+    for provider in _provider_priority(provider_override):
+        config = _resolve_provider_config(provider)
+        if config.provider == "mock":
+            continue
+        if config.provider == "ollama":
+            if not local_llm_service.is_local_enabled():
+                continue
+            try:
+                if not await local_llm_service.is_ollama_available():
+                    last_error = "ollama unavailable"
+                    continue
+                return await local_llm_service.chat(system_prompt, user_message, max_tokens=max_tokens)
+            except Exception as exc:
+                last_error = f"ollama failed: {type(exc).__name__}"
+                print(f"[LOCAL_LLM] 本地模型失败，fallback 到 API: {exc}")
+                continue
+        if not config.api_key:
+            last_error = f"{config.provider} API key missing"
+            continue
+        try:
+            return await asyncio.to_thread(
+                _blocking_provider_chat,
+                config,
+                system_prompt,
+                user_message,
+                max_tokens,
+            )
+        except Exception as exc:
+            last_error = f"{config.provider} failed: {type(exc).__name__}"
+            continue
+    raise RuntimeError(last_error)
 
 
 class MockLLMService:
@@ -1000,11 +1289,7 @@ class ProviderSwitchingLLMService:
         """Call one OpenAI-compatible provider and return the guarded reply."""
         client = self._get_client(config)
         if client is None:
-            return self._build_fallback_result(
-                config=config,
-                reply=mock_reference,
-                reason="client unavailable",
-            )
+            raise RuntimeError("client unavailable")
 
         resolved = _resolve_style_context(conversation)
         messages = _build_real_llm_messages(conversation, resolved)
@@ -1018,11 +1303,7 @@ class ProviderSwitchingLLMService:
             )
         except Exception as timeout_error:  # pragma: no cover
             LOGGER.warning("LLM request timeout or error: %s", timeout_error)
-            return self._build_fallback_result(
-                config=config,
-                reply=mock_reference,
-                reason=f"request timeout or error: {type(timeout_error).__name__}",
-            )
+            raise
         
         reply = _extract_response_text(response)
         guarded = _guard_real_reply(reply, mock_reference, conversation.recent_logs)
@@ -1113,6 +1394,7 @@ class ProviderSwitchingLLMService:
             )
 
         LOGGER.info("using real llm: provider=%s model=%s", config.provider, config.model)
+        hallucination_warning = _check_hallucination_warning(guarded, conversation)
         return LLMReplyResult(
             reply=guarded,
             requested_provider=config.provider,
@@ -1122,31 +1404,172 @@ class ProviderSwitchingLLMService:
             raw_llm_reply=reply,
             postprocess_used=_normalize_reply_text(reply) != guarded,
             safe_template_reply="",
+            _hallucination_warning=bool(hallucination_warning.get("suspicious")),
+            hallucination_flagged_phrases=list(hallucination_warning.get("flagged_phrases") or []),
+        )
+
+    def _generate_local_reply_result(
+        self,
+        conversation: LLMConversationInput,
+        config: ProviderConfig,
+        mock_reference: str,
+    ) -> LLMReplyResult:
+        """调用本地 Ollama，并复用现有回复保护与模板回退逻辑。"""
+        if not local_llm_service.is_local_enabled():
+            raise RuntimeError("local llm disabled")
+        if not bool(_run_async_value(local_llm_service.is_ollama_available())):
+            raise RuntimeError("ollama unavailable")
+
+        resolved = _resolve_style_context(conversation)
+        messages = _build_real_llm_messages(conversation, resolved)
+        system_prompt = str(messages[0]["content"] or "") if messages else ""
+        user_payload = str(messages[1]["content"] or "") if len(messages) > 1 else conversation.user_message
+        reply = str(
+            _run_async_value(
+                local_llm_service.chat(
+                    system_prompt=system_prompt,
+                    user_message=user_payload,
+                    max_tokens=220,
+                )
+            )
+            or ""
+        ).strip()
+        if not reply:
+            raise RuntimeError("ollama empty response")
+
+        guarded = _guard_real_reply(reply, mock_reference, conversation.recent_logs)
+        if guarded == mock_reference:
+            guard_reason = _classify_response_guard_issue(reply, conversation.recent_logs)
+            repair_reply = _scenario_template_reply(conversation, resolved)
+            if repair_reply:
+                return LLMReplyResult(
+                    reply=repair_reply,
+                    requested_provider=config.provider,
+                    actual_provider="template_fallback",
+                    model=config.model,
+                    fallback_used=True,
+                    fallback_reason=f"template_fallback: {guard_reason}",
+                    guard_triggered=True,
+                    guard_reason=guard_reason,
+                    raw_llm_reply=reply,
+                    postprocess_used=True,
+                    safe_template_reply=repair_reply,
+                    template_used=True,
+                    template_name=getattr(resolved.state, "care_scenario", "scenario_template") or "scenario_template",
+                )
+            return self._build_fallback_result(
+                config=config,
+                reply=mock_reference,
+                reason="response guard rejected local output",
+                guard_triggered=True,
+                guard_reason=guard_reason,
+                raw_llm_reply=reply,
+            )
+        if _fails_direct_question_guard(conversation, guarded):
+            repair_reply = _scenario_template_reply(conversation, resolved)
+            if repair_reply:
+                return LLMReplyResult(
+                    reply=repair_reply,
+                    requested_provider=config.provider,
+                    actual_provider="template_fallback",
+                    model=config.model,
+                    fallback_used=True,
+                    fallback_reason="template_fallback: direct_question_guard",
+                    guard_triggered=True,
+                    guard_reason="direct_question_guard",
+                    raw_llm_reply=reply,
+                    postprocess_used=True,
+                    safe_template_reply=repair_reply,
+                    template_used=True,
+                    template_name=getattr(resolved.state, "care_scenario", "scenario_template") or "scenario_template",
+                )
+            return self._build_fallback_result(
+                config=config,
+                reply=mock_reference,
+                reason="direct question guard rejected local output",
+                guard_triggered=True,
+                guard_reason="irrelevant_response_guard",
+                raw_llm_reply=reply,
+            )
+        if _fails_relevance_guard(conversation, resolved, guarded):
+            repair_reply = _scenario_template_reply(conversation, resolved)
+            if repair_reply:
+                return LLMReplyResult(
+                    reply=repair_reply,
+                    requested_provider=config.provider,
+                    actual_provider="template_fallback",
+                    model=config.model,
+                    fallback_used=True,
+                    fallback_reason="template_fallback: scenario_template_repair",
+                    guard_triggered=True,
+                    guard_reason="scenario_template_repair",
+                    raw_llm_reply=reply,
+                    postprocess_used=True,
+                    safe_template_reply=repair_reply,
+                    template_used=True,
+                    template_name=getattr(resolved.state, "care_scenario", "scenario_template") or "scenario_template",
+                )
+            return self._build_fallback_result(
+                config=config,
+                reply=mock_reference,
+                reason="relevance guard rejected local output",
+                guard_triggered=True,
+                guard_reason="irrelevant_response_guard",
+                raw_llm_reply=reply,
+            )
+
+        LOGGER.info("using local llm: provider=%s model=%s", config.provider, config.model)
+        hallucination_warning = _check_hallucination_warning(guarded, conversation)
+        return LLMReplyResult(
+            reply=guarded,
+            requested_provider=config.provider,
+            actual_provider=config.provider,
+            model=config.model,
+            fallback_used=False,
+            raw_llm_reply=reply,
+            postprocess_used=_normalize_reply_text(reply) != guarded,
+            safe_template_reply="",
+            _hallucination_warning=bool(hallucination_warning.get("suspicious")),
+            hallucination_flagged_phrases=list(hallucination_warning.get("flagged_phrases") or []),
         )
 
     def generate_reply_result(self, conversation: LLMConversationInput) -> LLMReplyResult:
         """Prefer the configured provider, but never allow remote failures to break chat."""
-        config = _resolve_provider_config(self._provider_override)
         log_llm_runtime_config_once(self._provider_override)
-        if config.provider == "mock":
+        mock_reference = self._mock_service.generate_reply(conversation)
+        last_error = "no provider succeeded"
+        provider_names = _provider_priority(self._provider_override)
+        if provider_names == ["mock"]:
             return self._mock_service.generate_reply_result(conversation)
 
-        mock_reference = self._mock_service.generate_reply(conversation)
-        if not config.api_key:
-            return self._build_fallback_result(
-                config=config,
-                reply=mock_reference,
-                reason=f"{config.provider} API key missing",
-            )
+        for provider_name in provider_names:
+            config = _resolve_provider_config(provider_name)
+            if config.provider == "mock":
+                continue
+            if config.provider == "ollama":
+                if not local_llm_service.is_local_enabled():
+                    continue
+                try:
+                    return self._generate_local_reply_result(conversation, config, mock_reference)
+                except Exception as error:  # pragma: no cover - depends on local ollama state
+                    last_error = f"{config.provider}: {type(error).__name__}: {error}"
+                    print(f"[LOCAL_LLM] 本地模型失败，fallback 到 API: {error}")
+                    continue
+            if not config.api_key:
+                last_error = f"{config.provider} API key missing"
+                continue
+            try:
+                return self._generate_real_reply_result(conversation, config, mock_reference)
+            except Exception as error:  # pragma: no cover - depends on network and provider state
+                last_error = f"{config.provider}: {type(error).__name__}: {error}"
+                continue
 
-        try:
-            return self._generate_real_reply_result(conversation, config, mock_reference)
-        except Exception as error:  # pragma: no cover - depends on network and provider state
-            return self._build_fallback_result(
-                config=config,
-                reply=mock_reference,
-                reason=f"{type(error).__name__}: {error}",
-            )
+        fallback_config = _resolve_provider_config(provider_names[0] if provider_names else self._provider_override)
+        return self._build_fallback_result(
+            config=fallback_config,
+            reply=mock_reference,
+            reason=last_error,
+        )
 
     def generate_reply(self, conversation: LLMConversationInput) -> str:
         """Return only the reply text for the main chat flow."""

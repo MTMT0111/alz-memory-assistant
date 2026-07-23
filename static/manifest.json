@@ -1,0 +1,14 @@
+{
+  "name": "阿尔兹海默症照护助手",
+  "short_name": "照护助手",
+  "description": "家庭照护辅助系统",
+  "start_url": "/patients",
+  "display": "standalone",
+  "background_color": "#faf7f2",
+  "theme_color": "#2563a8",
+  "orientation": "portrait",
+  "icons": [
+    {"src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}

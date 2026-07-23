@@ -529,3 +529,137 @@ curl -sS http://127.0.0.1:8000/profile
 4. 给 reminder 增加 `completed` / `confirmed_at` / `confirmed_by` 的设计草案，先写文档，不急着改主链路。
 5. 做 MiniMax 文本对照测试，再决定是否把 MiniMax TTS 接入 `/voice/speak` 的可选 provider。
 6. 补充隐私、授权、医疗边界和真实用户测试伦理说明，为导师汇报和后续 proposal 做准备。
+
+---
+
+## Future Direction: Care Loop + Emotional Memory Companion
+
+本项目未来将围绕"日常照护闭环"和"情感记忆陪伴"双主线发展：
+前者面向家属减负和风险管理，后者面向患者的熟悉感、安全感与情绪支持。
+
+### Core Direction A: Care Loop（照护闭环）
+
+系统从"能聊天"发展为"辅助家属完成日常照护流程"。
+重点不是让 LLM 自由判断，而是用结构化提醒、家属确认、
+风险事件和每日照护记录形成闭环。
+
+关键能力：
+- daily care loop（每日照护台账）
+- reminder confirmation（提醒确认）
+- caregiver dashboard（家属看板）
+- risk events（风险事件识别）
+- medication safety（用药安全，不让 LLM 猜测用药事实）
+- care log（照护日志）
+- family burden reduction（减轻家属压力）
+
+### Core Direction B: Emotional Memory Companion（情感记忆陪伴）
+
+系统从"回答问题"发展为"用熟悉素材建立情感陪伴"。
+通过照片、老歌、语音留言、旧地点、旧事件和家属审核后的记忆素材，
+帮助患者获得熟悉感和安全感。
+
+关键能力：
+- familiar materials（熟悉素材）
+- reminiscence support（回忆陪伴）
+- family photo timeline（家庭记忆相册）
+- voice notes（家属语音留言）
+- old songs / personal stories（旧歌/个人故事）
+- emotional grounding（情绪锚定）
+- non-testing conversation（非测试式对话，不考问患者）
+
+### Why Both Are Necessary（为何两者缺一不可）
+
+只做照护管理会显得冷冰冰，只做情感陪伴又不能真正减轻家属压力。
+这个项目的优势在于把两者连接起来：
+
+患者端对话
+-> 情绪/记忆/风险识别
+-> 家属端照护摘要
+-> 家属审核记忆素材
+-> 回到患者端形成更个性化陪伴
+
+---
+
+## What We Should Not Do Next
+
+当前不建议继续盲目加功能。以下方向暂时不要优先推进：
+
+- 大规模重构
+- 复杂账号权限系统
+- 复杂医学诊断功能
+- 让 LLM 自动决定用药
+- 让 LLM 自动写入长期记忆（不经家属审核）
+- 无审核地使用敏感家庭信息
+- 过早做商业化包装
+
+原因：
+当前最重要的是验证真实照护场景是否有用，
+并把"照护闭环"和"情感记忆陪伴"两个核心链路打磨稳定。
+功能够用、体验可靠，比功能丰富更重要。
+
+---
+
+## Roadmap（重新规划版）
+
+### P0：真实试用前稳定性修复
+目的：确保系统不会把 demo 数据污染真实患者，
+不会重复推送提醒，不会因缓存/登录问题影响真实试用。
+
+具体任务：
+- patient_id 上下文隔离验证
+- demo 数据不污染真实患者（李桂兰/小雨/老王只在 demo 出现）
+- medication overdue 防重复推送
+- Service Worker 缓存版本控制
+- 登录失败提示完善
+
+### P1：真实家庭测试准备
+目的：生成测试家庭初始化脚本、用户指南、部署清单、启动脚本，
+支持 1-2 个真实或模拟照护家庭试用。
+
+具体任务：
+- scripts/setup_test_family.py
+- docs/user_guide.md
+- docs/deploy_checklist.md
+- docs/start.sh
+- results/usability_test_plan.md（已有，确认可用）
+
+### P2：情感记忆陪伴增强
+目的：以家庭记忆相册、照片故事、语音说明和回忆对话为核心，
+提高患者端情感价值。
+
+具体任务：
+- 家庭记忆相册（photo timeline，按年代浏览）
+- 照片故事（story_text，照护者录入）
+- 家属语音留言录制（voice note）
+- 从照片直接开启对话
+- 旧歌/旧地点素材支持（扩展）
+- 敏感记忆安全边界标记
+
+---
+
+### v0.6 — Real Testing and Care Reliability
+目标：先让真实家庭或模拟家庭能够试用，验证照护闭环基本可用。
+
+重点：
+1. 遗留 bug 修复（P0 任务）
+2. 真实测试准备（P1 任务）
+3. 每日照护台账完善（跨天记录、今日/昨日对比、风险事件处理状态）
+
+### v0.7 — Emotional Memory Companion
+目标：强化患者端情感陪伴，不只是管理后台。
+
+重点：
+1. 家庭记忆相册（photo timeline + 年代浏览 + 照片故事 + 语音说明）
+2. 回忆陪伴增强（旧地点/家属语音留言/敏感记忆安全边界）
+3. 家属审核式记忆沉淀增强（去重/冲突合并/审核备注/敏感程度标记）
+
+### v0.8 — Voice and Deployment
+目标：让系统更像真实陪伴设备，可以稳定部署给真实家庭。
+
+重点：
+1. MiniMax TTS 真实端到端验证
+2. 浏览器 TTS fallback 稳定性
+3. 手机端 PWA 优化
+4. 局域网部署文档
+5. 隐私授权页完善
+6. 真实照护家庭试用反馈整理

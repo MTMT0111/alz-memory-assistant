@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from typing import Any
 
 
@@ -37,6 +38,10 @@ class FamiliarMaterial:
     sensitivity_level: str = ""
     tags: str = ""
     safety_note: str = ""
+    photo_year: int | None = None
+    photo_decade: str = ""
+    story_text: str = ""
+    voice_note_path: str = ""
     is_sensitive: bool = False
     is_active: bool = True
     created_at: str = ""
@@ -62,11 +67,29 @@ class FamiliarMaterial:
             sensitivity_level=row["sensitivity_level"] if "sensitivity_level" in row.keys() else "",
             tags=row["tags"] or "",
             safety_note=row["safety_note"] or "",
+            photo_year=row["photo_year"] if "photo_year" in row.keys() else None,
+            photo_decade=row["photo_decade"] if "photo_decade" in row.keys() else "",
+            story_text=row["story_text"] if "story_text" in row.keys() else "",
+            voice_note_path=row["voice_note_path"] if "voice_note_path" in row.keys() else "",
             is_sensitive=bool(row["is_sensitive"]),
             is_active=bool(row["is_active"]) if "is_active" in row.keys() else True,
             created_at=row["created_at"] or "",
             updated_at=row["updated_at"] or "",
         )
+
+    def tag_list(self) -> list[str]:
+        """兼容历史逗号标签和新版 JSON 数组标签。"""
+        text = str(self.tags or "").strip()
+        if not text:
+            return []
+        if text.startswith("["):
+            try:
+                parsed = json.loads(text)
+                if isinstance(parsed, list):
+                    return [str(item).strip() for item in parsed if str(item).strip()]
+            except Exception:
+                pass
+        return [item.strip() for item in text.replace("，", ",").split(",") if item.strip()]
 
     def to_dict(self) -> dict[str, Any]:
         """Return a JSON-friendly mapping."""
@@ -90,7 +113,12 @@ class FamiliarMaterial:
             "related_time": self.related_time,
             "sensitivity_level": self.sensitivity_level,
             "tags": self.tags,
+            "tag_list": self.tag_list(),
             "safety_note": self.safety_note,
+            "photo_year": self.photo_year,
+            "photo_decade": self.photo_decade,
+            "story_text": self.story_text,
+            "voice_note_path": self.voice_note_path,
             "is_sensitive": self.is_sensitive,
             "is_active": self.is_active,
             "created_at": self.created_at,

@@ -4,13 +4,16 @@
 <section class="conversation-device-shell">
     <div class="device-top-status-bar" aria-label="当前状态">
         <div class="conversation-top-actions">
-            <a class="ghost-button conversation-home-link" href="/app_home">首页</a>
-            <a class="ghost-button conversation-home-link" href="/analysis">家属端</a>
-            <a class="ghost-button conversation-home-link" href="/materials">素材库</a>
+            <a class="ghost-button conversation-home-link" href="/patients">患者列表</a>
+            <a class="ghost-button conversation-home-link" href="/care-portal/{{ caregiver_patient_id }}">看板</a>
+        </div>
+        <div class="conversation-patient-header" aria-label="患者信息">
+            <strong id="conversation-patient-name">{{ patient.name if patient is defined else profile.name or "患者" }}</strong>
+            <span id="conversation-today-date">今日</span>
         </div>
         <div class="device-top-status-info">
-            <span class="device-top-hint" id="patient-name-hint">李奶奶 · 陪伴中 · 当前模型 DeepSeek</span>
-            <span id="conversation-provider-hint" class="device-top-hint">当前模型：读取中</span>
+            <span class="device-top-hint" id="patient-name-hint">温和陪伴中</span>
+            <span id="conversation-provider-hint" class="device-top-hint conversation-provider-compact">模型：读取中</span>
         </div>
         {% if debug_mode %}
         <a class="ghost-button conversation-debug-link" href="/conversation">普通模式</a>
@@ -19,7 +22,7 @@
         {% endif %}
     </div>
 
-    <details id="conversation-model-status" class="conversation-model-status" {% if not debug_mode %}open{% endif %}>
+    <details id="conversation-model-status" class="conversation-model-status" {% if not debug_mode %}hidden{% else %}open{% endif %}>
         <summary>
             <span>{% if debug_mode %}调试信息{% else %}模型状态{% endif %}</span>
             <strong id="conversation-model-status-line">当前模型：DeepSeek · 读取中</strong>
@@ -49,19 +52,22 @@
     </details>
 
     <section class="chat-panel chat-panel-device">
-        <div class="conversation-quick-tests" aria-label="快捷测试">
-            <button type="button" class="conversation-quick-test" data-message="小雨什么时候回来？">小雨什么时候回来？</button>
-            <button type="button" class="conversation-quick-test" data-message="我是不是还没吃药？">我是不是还没吃药？</button>
-            <button type="button" class="conversation-quick-test" data-message="我要回家">我要回家</button>
-            <button type="button" class="conversation-quick-test" data-message="我有点害怕">我有点害怕</button>
-            <button type="button" class="conversation-quick-test" data-message="我想听老歌">我想听老歌</button>
-            <button type="button" class="conversation-quick-test" data-message="想聊以前的事">想聊以前的事</button>
-        </div>
+        <details class="conversation-suggestions">
+            <summary>常用开场</summary>
+            <div class="conversation-quick-tests" aria-label="快捷测试">
+                <button type="button" class="conversation-quick-test" data-message="家人什么时候回来？">家人什么时候回来？</button>
+                <button type="button" class="conversation-quick-test" data-message="我是不是还没吃药？">我是不是还没吃药？</button>
+                <button type="button" class="conversation-quick-test" data-message="我要回家">我要回家</button>
+                <button type="button" class="conversation-quick-test" data-message="我有点害怕">我有点害怕</button>
+                <button type="button" class="conversation-quick-test" data-message="我想听老歌">我想听老歌</button>
+                <button type="button" class="conversation-quick-test" data-message="想聊以前的事">想聊以前的事</button>
+            </div>
+        </details>
         <div id="chat-box" class="chat-box-device"></div>
 
         <div class="device-control-dock" aria-label="对话控制区">
             <div class="input-row input-row-chat input-row-device">
-                <button id="voice-button" type="button" class="voice-placeholder-button inline-voice-button device-voice-button">麦克风</button>
+                <button id="mic-btn" type="button" class="voice-placeholder-button inline-voice-button device-voice-button" aria-label="开始或停止录音">麦克风</button>
                 <input id="input" type="text" placeholder="想起谁了？或者想说哪件事？">
                 <button id="send-button" type="button">发送</button>
             </div>
@@ -75,10 +81,11 @@
                     <input id="tts-enabled-toggle" type="checkbox" checked>
                     <span>语音朗读</span>
                 </label>
-                <span id="tts-fallback-status" class="device-help-text">语音朗读：浏览器朗读 / MiniMax TTS 待接入</span>
+                <span id="tts-fallback-status" class="device-help-text">语音朗读：浏览器朗读 / MiniMax TTS</span>
+                <span id="tts-playing-indicator" class="tts-playing-indicator" hidden>🔊 正在播放</span>
                 <button id="stop-speaking-button" type="button" class="dock-quiet-button" disabled>停止</button>
             </div>
-            <div id="voice-status-strip" class="voice-status-strip" aria-live="polite">
+            <div id="voice-status-strip" class="voice-status-strip" aria-live="polite" {% if not debug_mode %}hidden{% endif %}>
                 <span class="voice-status-chip">
                     <strong>状态</strong>
                     <span id="voice-strip-state">陪伴中</span>

@@ -94,6 +94,8 @@ def create_candidate(patient_id: int, payload: dict[str, Any]) -> MemoryCandidat
         "related_person": _clean_text(payload.get("related_person")),
         "sensitivity_level": _clean_text(payload.get("sensitivity_level")) or "low",
         "status": _normalize_status(payload.get("status")),
+        "dedup_warning": _clean_text(payload.get("dedup_warning")),
+        "conflict_warning": _clean_text(payload.get("conflict_warning")),
     }
     with closing(get_connection()) as connection:
         connection.execute(
@@ -101,9 +103,9 @@ def create_candidate(patient_id: int, payload: dict[str, Any]) -> MemoryCandidat
             INSERT INTO memory_candidates (
                 patient_id, source_message, suggested_title, suggested_description,
                 suggested_material_type, related_person, sensitivity_level,
-                status, created_at, reviewed_at
+                status, dedup_warning, conflict_warning, created_at, reviewed_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 patient_id,
@@ -114,6 +116,8 @@ def create_candidate(patient_id: int, payload: dict[str, Any]) -> MemoryCandidat
                 normalized["related_person"],
                 normalized["sensitivity_level"],
                 normalized["status"],
+                normalized["dedup_warning"],
+                normalized["conflict_warning"],
                 now,
                 "",
             ),

@@ -46,8 +46,8 @@ python scripts/test_real_chat_flow.py
 ## 3️⃣ 启动应用 (1分钟)
 
 ```bash
-# 启动FastAPI服务器
-python app/main.py
+# 启动Fapython app/main.pystAPI服务器
+
 
 # 打开浏览器
 # http://localhost:8000/conversation

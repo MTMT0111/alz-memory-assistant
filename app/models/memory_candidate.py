@@ -32,12 +32,19 @@ class MemoryCandidate:
     related_person: str = ""
     sensitivity_level: str = ""
     status: str = "pending"
+    dedup_warning: str = ""
+    conflict_warning: str = ""
     created_at: str = ""
     reviewed_at: str = ""
 
     @classmethod
     def from_row(cls, row: Any) -> "MemoryCandidate":
         """Build a candidate from a SQLite row."""
+        row_keys = set(row.keys()) if hasattr(row, "keys") else set()
+
+        def value(name: str, default: Any = "") -> Any:
+            return row[name] if name in row_keys else default
+
         return cls(
             id=row["id"],
             patient_id=row["patient_id"],
@@ -48,6 +55,8 @@ class MemoryCandidate:
             related_person=row["related_person"] or "",
             sensitivity_level=row["sensitivity_level"] or "",
             status=row["status"] or "pending",
+            dedup_warning=value("dedup_warning") or "",
+            conflict_warning=value("conflict_warning") or "",
             created_at=row["created_at"] or "",
             reviewed_at=row["reviewed_at"] or "",
         )
@@ -64,6 +73,8 @@ class MemoryCandidate:
             "related_person": self.related_person,
             "sensitivity_level": self.sensitivity_level,
             "status": self.status,
+            "dedup_warning": self.dedup_warning,
+            "conflict_warning": self.conflict_warning,
             "created_at": self.created_at,
             "reviewed_at": self.reviewed_at,
             "is_sensitive": self.suggested_material_type == "sensitive_memory" or self.sensitivity_level in {"medium", "high"},
