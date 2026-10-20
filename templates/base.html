@@ -115,13 +115,13 @@
         };
     </script>
     {% if active_page not in ["login", "app_home"] %}
-    <script src="/static/script.js"></script>
+    <script src="/static/script.js?v=20261020-voice"></script>
     {% endif %}
     {% if active_page == "app_home" %}
     <script src="/static/app_shell.js"></script>
     {% endif %}
     {% if active_page == "conversation" %}
-    <script src="/static/voice.js"></script>
+    <script src="/static/voice.js?v=20261020-voice"></script>
     {% endif %}
     {% if active_page == "llm_eval" %}
     <script src="/static/llm_eval.js"></script>

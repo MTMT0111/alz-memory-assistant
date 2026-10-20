@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import binascii
 import json
@@ -132,7 +133,7 @@ async def synthesize(text: str, voice_id: str | None = None) -> dict[str, object
 
     selected_voice_id = str(voice_id or DEFAULT_MINIMAX_TTS_VOICE_ID).strip() or DEFAULT_MINIMAX_TTS_VOICE_ID
     try:
-        return _request_minimax_tts(clean_text, selected_voice_id)
+        return await asyncio.to_thread(_request_minimax_tts, clean_text, selected_voice_id)
     except Exception as exc:
         return _fallback(clean_text, f"TTS fallback: {type(exc).__name__}")
 

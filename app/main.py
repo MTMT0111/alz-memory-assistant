@@ -18,6 +18,7 @@ from fastapi import Cookie, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
 from app.config import PAGE_EYEBROW, PAGE_TITLE
@@ -2772,7 +2773,7 @@ async def transcribe_stt(request: Request):
         return JSONResponse(status_code=400, content={"text": "", "error": str(exc)})
 
     try:
-        text = _transcribe_with_whisper(filename, audio_bytes, content_type)
+        text = await run_in_threadpool(_transcribe_with_whisper, filename, audio_bytes, content_type)
     except RuntimeError as exc:
         return JSONResponse(status_code=503, content={"text": "", "error": str(exc)})
     except Exception as exc:

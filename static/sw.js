@@ -1,6 +1,6 @@
 // 更新静态资源后需要修改 CACHE_NAME 版本号，强制用户刷新缓存
-// 当前版本：v2，最后更新：2026-06-29
-const CACHE_NAME = 'alz-v2';
+// 最后更新：2026-10-20，语音交互反馈
+const CACHE_NAME = 'alz-v7-voice';
 const STATIC_ASSETS = [
   '/static/style.css', '/static/script.js', '/static/voice.js',
   '/static/manifest.json',

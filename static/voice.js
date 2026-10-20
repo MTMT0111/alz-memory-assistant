@@ -45,7 +45,7 @@
         events: document.getElementById("voice-debug-events")
     };
 
-    const defaultHelpText = "按 Enter 发送";
+    const defaultHelpText = "点一下开始说话，说完再点一下结束并发送。";
     const defaultStripText = "我会安静陪着你。";
     const stateTextMap = {
         idle: "陪伴中",
@@ -56,10 +56,11 @@
     const substageTextMap = {
         idle: "我会安静陪着你。",
         listening: "我在听你说话。",
+        requesting_mic: "正在打开麦克风",
         uploading_audio: "我听到了，正在整理。",
         transcribing: "我听到了，正在整理。",
         sending_chat: "我正在想怎么回答你。",
-        generating_speech: "我准备好语音了。",
+        generating_speech: "正在准备朗读",
         playing_audio: "我正在陪你慢慢说。"
     };
     const recordingMimeCandidates = [
@@ -71,7 +72,7 @@
     const query = new URLSearchParams(window.location.search);
     const debugEnabled = query.get("voice_debug") === "1"
         || query.get("debugvoice") === "1"
-        || ["127.0.0.1", "localhost"].includes(window.location.hostname);
+        || query.get("debug") === "1";
     const hasRecorderSupport = Boolean(
         navigator.mediaDevices
         && typeof navigator.mediaDevices.getUserMedia === "function"
@@ -88,18 +89,24 @@
     let currentAudio = null;
     let currentAudioUrl = "";
     let currentUtterance = null;
-    let backendStatus = "unknown";
+    let browserStartTimer = null;
     let discardNextRecording = false;
+    let recordingTimer = null;
+    let voiceEpoch = 0;
+    let speechEpoch = 0;
+    let sttController = null;
+    let ttsController = null;
+    let muteCurrentReply = false;
     let turnStartedAt = 0;
     let recordStartedAt = 0;
     let playbackStartedAt = 0;
 
     function readTtsEnabled() {
-        const stored = window.localStorage.getItem("conversation_tts_enabled");
-        if (stored === "false") {
-            return false;
+        try {
+            return window.localStorage.getItem("conversation_tts_enabled") !== "false";
+        } catch {
+            return true;
         }
-        return true;
     }
 
     function updateTtsFallbackStatus(text) {
@@ -164,6 +171,7 @@
 
     function scheduleRestore(delay = 1800) {
         clearRestoreTimer();
+        if (helpText.dataset.kind === "warning") return;
         restoreTimer = window.setTimeout(() => {
             setPhase("idle", "idle", "陪伴中", defaultHelpText);
         }, delay);
@@ -440,7 +448,15 @@
         dockStatus.dataset.state = nextState;
         dockStatus.dataset.step = nextStep;
         statusText.textContent = text || substageTextMap[nextStep] || stateTextMap[nextState];
-        stopSpeakingButton.disabled = nextState !== "speaking";
+        stopSpeakingButton.disabled = nextState === "idle" || (nextStep === "sending_chat" && muteCurrentReply);
+        stopSpeakingButton.textContent = nextState === "listening" ? "取消录音"
+            : nextStep === "sending_chat" ? "本次不朗读" : "停止";
+        voiceButton.disabled = nextState === "thinking";
+        voiceButton.textContent = nextState === "listening" ? "结束并发送"
+            : nextState === "speaking" ? "打断并说话" : "开始说话";
+        voiceButton.setAttribute("aria-label", voiceButton.textContent);
+        const timer = document.getElementById("recording-duration");
+        if (timer) timer.hidden = nextState !== "listening";
         if (ttsPlayingIndicator) {
             ttsPlayingIndicator.hidden = nextState !== "speaking";
         }
@@ -571,7 +587,6 @@
 
     function resetInputToTranscript(transcript) {
         input.value = transcript;
-        input.focus();
         input.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
@@ -585,10 +600,13 @@
     }
 
     function cleanupAudioPlayback() {
+        window.clearTimeout(browserStartTimer);
+        browserStartTimer = null;
         if (currentAudio) {
-            currentAudio.pause();
-            currentAudio.src = "";
+            const audio = currentAudio;
             currentAudio = null;
+            audio.pause();
+            audio.src = "";
         }
         if (currentAudioUrl) {
             if (String(currentAudioUrl).startsWith("blob:")) {
@@ -596,18 +614,22 @@
             }
             currentAudioUrl = "";
         }
+        currentUtterance = null;
         if (window.speechSynthesis) {
             window.speechSynthesis.cancel();
         }
-        currentUtterance = null;
     }
 
     function stopSpeaking(options = {}) {
+        speechEpoch += 1;
+        ttsController?.abort();
+        ttsController = null;
         if (currentState === "speaking" && playbackStartedAt > 0 && !debugState.metrics.playback_duration_ms) {
             debugState.metrics.playback_duration_ms = Math.max(0, Math.round((window.performance?.now?.() || Date.now()) - playbackStartedAt));
         }
         cleanupAudioPlayback();
         playbackStartedAt = 0;
+        updateTtsFallbackStatus(isTtsEnabled() ? "朗读已停止" : "语音朗读已关闭");
 
         if (options.silent) {
             if (!options.preserveState) {
@@ -676,16 +698,6 @@
         }
     }
 
-    function markBackendAvailability(errorCode) {
-        if (errorCode === "VOICE_API_KEY_MISSING") {
-            backendStatus = "unavailable";
-            return;
-        }
-        if (backendStatus !== "unavailable") {
-            backendStatus = "ready";
-        }
-    }
-
     function applyVoiceError(payload, fallbackText) {
         const message = String(payload?.user_friendly_message || fallbackText).trim() || fallbackText;
         debugState.error_code = String(payload?.error_code || "").trim();
@@ -719,7 +731,6 @@
                 debugState.metrics.tts_latency_ms = payload.latency_ms;
             }
         }
-        markBackendAvailability(debugState.error_code);
         renderDebugPanel();
         emitDebugEvent(`error:${payload?.stage || "unknown"}`, `${debugState.error_code || "unknown"} ${message}`);
         return message;
@@ -730,6 +741,7 @@
             return false;
         }
         cleanupAudioPlayback();
+        const epoch = speechEpoch;
         const utterance = new window.SpeechSynthesisUtterance(String(text || "").trim());
         utterance.lang = "zh-CN";
         utterance.rate = 0.92;
@@ -740,13 +752,19 @@
         debugState.tts_provider = "browser_tts";
         debugState.tts_model = "speechSynthesis";
         debugState.tts_error_code = "";
-        updateTtsFallbackStatus("语音朗读：浏览器朗读");
+        updateTtsFallbackStatus("正在尝试设备朗读");
 
         utterance.addEventListener("start", () => {
+            if (currentUtterance !== utterance || epoch !== speechEpoch) return;
+            window.clearTimeout(browserStartTimer);
+            updateTtsFallbackStatus("正在使用设备朗读");
             playbackStartedAt = window.performance?.now?.() || Date.now();
             setPhase("speaking", "playing_audio", "🔊 播放中...", "当前使用浏览器朗读。");
         });
         utterance.addEventListener("end", () => {
+            if (currentUtterance !== utterance || epoch !== speechEpoch) return;
+            window.clearTimeout(browserStartTimer);
+            updateTtsFallbackStatus("本次朗读已结束");
             debugState.metrics.playback_duration_ms = playbackStartedAt > 0
                 ? Math.max(0, Math.round((window.performance?.now?.() || Date.now()) - playbackStartedAt))
                 : null;
@@ -757,6 +775,9 @@
             setPhase("idle", "idle", "陪伴中", defaultHelpText);
         });
         utterance.addEventListener("error", () => {
+            if (currentUtterance !== utterance || epoch !== speechEpoch) return;
+            window.clearTimeout(browserStartTimer);
+            updateTtsFallbackStatus("朗读未完成，回复文字已保留");
             playbackStartedAt = 0;
             currentUtterance = null;
             debugState.tts_error_code = "BROWSER_TTS_FAILED";
@@ -766,8 +787,19 @@
             scheduleRestore();
         });
 
-        window.speechSynthesis.cancel();
-        window.speechSynthesis.speak(utterance);
+        browserStartTimer = window.setTimeout(() => {
+            if (currentUtterance !== utterance || epoch !== speechEpoch) return;
+            cleanupAudioPlayback();
+            updateTtsFallbackStatus("朗读未开始，回复文字已保留");
+            setPhase("idle", "idle", "设备暂时没有开始朗读", "你可以先看回复文字，或再试一次对话。", "warning");
+        }, 15000);
+        try {
+            window.speechSynthesis.speak(utterance);
+        } catch {
+            cleanupAudioPlayback();
+            updateTtsFallbackStatus("朗读未开始，回复文字已保留");
+            return false;
+        }
         return true;
     }
 
@@ -778,20 +810,17 @@
             setPhase("idle", "idle", "陪伴中", defaultHelpText);
             return;
         }
-        if (!isTtsEnabled()) {
-            updateTtsFallbackStatus("语音朗读已关闭");
+        if (!isTtsEnabled() || muteCurrentReply) {
+            updateTtsFallbackStatus("本次回复仅显示文字");
             finalizeTurnMetrics();
             setPhase("idle", "idle", "陪伴中", defaultHelpText);
             return;
         }
-        if (backendStatus === "unavailable") {
-            if (!speakWithBrowserFallback(cleanReply)) {
-                finalizeTurnMetrics();
-                setPhase("idle", "idle", "陪伴中", "语音服务还没有配置好，先继续文字聊天也可以。", "warning");
-            }
-            return;
-        }
-
+        stopSpeaking({ silent: true, preserveState: true });
+        const epoch = speechEpoch;
+        const controller = new AbortController();
+        ttsController = controller;
+        const timeout = window.setTimeout(() => controller.abort(), 45000);
         cleanupAudioPlayback();
         debugState.assistant_reply = cleanReply;
         debugState.tts_error_code = "";
@@ -799,12 +828,15 @@
             debugState.metrics.chat_latency_ms = meta.chatLatencyMs;
         }
         applyChatDiagnostics(meta.diagnostics);
-        setPhase("thinking", "generating_speech", "我准备好语音了。", "我会尽量说得更慢一点。");
+        setPhase("thinking", "generating_speech", "正在准备朗读", "回复文字已显示；你可以随时停止朗读。");
+        updateTtsFallbackStatus("语音尚未播放");
         emitDebugEvent("tts_request_start", cleanReply.slice(0, 36));
+        let requestedAudio = null;
 
         try {
             const ttsStartedAt = window.performance?.now?.() || Date.now();
             const response = await fetch("/api/tts", {
+                signal: controller.signal,
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
@@ -812,6 +844,7 @@
                 body: JSON.stringify({ text: cleanReply })
             });
             const payload = await response.json();
+            if (epoch !== speechEpoch) return;
             debugState.metrics.tts_latency_ms = Math.max(0, Math.round((window.performance?.now?.() || Date.now()) - ttsStartedAt));
 
             if (!response.ok || payload?.fallback) {
@@ -836,16 +869,16 @@
                 return;
             }
 
-            backendStatus = "ready";
             debugState.error_code = "";
             debugState.error_message = "";
             debugState.fallback_used = false;
             debugState.tts_provider = "minimax";
             debugState.tts_model = "t2a_v2";
             debugState.tts_error_code = "";
-            updateTtsFallbackStatus("MiniMax TTS 已朗读");
+            updateTtsFallbackStatus("语音已准备好，等待播放");
             currentAudioUrl = `data:audio/mp3;base64,${payload.audio_base64}`;
             const audio = new Audio(currentAudioUrl);
+            requestedAudio = audio;
             currentAudio = audio;
 
             audio.addEventListener("playing", () => {
@@ -853,7 +886,8 @@
                     return;
                 }
                 playbackStartedAt = window.performance?.now?.() || Date.now();
-                setPhase("speaking", "playing_audio", "🔊 播放中...", "当前使用 MiniMax TTS。");
+                updateTtsFallbackStatus("正在朗读回复");
+                setPhase("speaking", "playing_audio", "正在朗读", "随时可以停止，或打断后继续说话。");
                 emitDebugEvent("playback_started");
             });
 
@@ -867,6 +901,7 @@
                 cleanupAudioPlayback();
                 playbackStartedAt = 0;
                 debugState.final_status = "completed";
+                updateTtsFallbackStatus("本次朗读已结束");
                 finalizeTurnMetrics();
                 setPhase("idle", "idle", "陪伴中", defaultHelpText);
                 emitDebugEvent("playback_ended");
@@ -892,6 +927,8 @@
 
             await audio.play();
         } catch (error) {
+            if (epoch !== speechEpoch) return;
+            if (requestedAudio && currentAudio !== requestedAudio) return;
             console.error(error);
             cleanupAudioPlayback();
             playbackStartedAt = 0;
@@ -912,10 +949,17 @@
                 scheduleRestore();
             }
             emitDebugEvent("tts_exception", debugState.error_message);
+        } finally {
+            window.clearTimeout(timeout);
+            if (ttsController === controller) ttsController = null;
         }
     }
 
     async function transcribeAndSend(audioBlob) {
+        const epoch = voiceEpoch;
+        const controller = new AbortController();
+        sttController = controller;
+        const timeout = window.setTimeout(() => controller.abort(), 45000);
         const extension = blobExtension(audioBlob.type);
         const filename = `voice-note.${extension}`;
 
@@ -927,12 +971,14 @@
             formData.append("audio", audioBlob, filename);
             const sttStartedAt = window.performance?.now?.() || Date.now();
             const response = await fetch("/api/stt", {
+                signal: controller.signal,
                 method: "POST",
                 body: formData
             });
 
             if (!response.ok) {
                 const errorPayload = await readErrorPayload(response, "这次没有顺利听清，我们再说一遍就好。");
+                if (epoch !== voiceEpoch) return;
                 const detail = applyVoiceError(errorPayload, "这次没有顺利听清，我们再说一遍就好。");
                 finalizeTurnMetrics();
                 setPhase("idle", "idle", "这次没有顺利听清", detail, "warning");
@@ -940,8 +986,8 @@
                 return;
             }
 
-            setPhase("thinking", "transcribing", "我听到了，正在整理。", "我会尽量用简单一点的话整理。");
             const data = await response.json();
+            if (epoch !== voiceEpoch) return;
             const transcript = String(data?.text || "").trim();
             debugState.last_transcript = transcript;
             debugState.error_code = String(data?.error_code || "").trim();
@@ -974,7 +1020,6 @@
                 return;
             }
 
-            backendStatus = "ready";
             resetInputToTranscript(transcript);
             debugState.user_text_sent_to_chat = transcript;
             setPhase("thinking", "sending_chat", "我正在想怎么回答你。", "我会尽量用简单一点的话回答。");
@@ -999,6 +1044,7 @@
                 }
             }
         } catch (error) {
+            if (epoch !== voiceEpoch) return;
             console.error(error);
             debugState.error_code = "VOICE_UNKNOWN_ERROR";
             debugState.error_message = error instanceof Error ? error.message : "Unknown transcribe error";
@@ -1015,10 +1061,15 @@
             setPhase("idle", "idle", "这次没有顺利听清", "先继续文字聊天也可以。", "warning");
             scheduleRestore();
             emitDebugEvent("transcribe_exception", debugState.error_message);
+        } finally {
+            window.clearTimeout(timeout);
+            if (sttController === controller) sttController = null;
         }
     }
 
     function stopListening(options = {}) {
+        window.clearInterval(recordingTimer);
+        recordingTimer = null;
         if (options.cancelPendingBlob) {
             discardNextRecording = true;
             recordedChunks = [];
@@ -1028,24 +1079,21 @@
             mediaRecorder.stop();
         }
 
+        releaseStream();
         if (!options.keepStatus && currentState === "listening") {
-            finalizeTurnMetrics();
-            setPhase("idle", "idle", "陪伴中", defaultHelpText);
+            setPhase("thinking", "uploading_audio", "录音已结束，正在识别", "识别完成后会发送给陪伴助手。");
         }
     }
 
     async function startListening() {
-        if (backendStatus === "unavailable") {
-            setPhase("idle", "idle", "陪伴中", "语音服务还没有配置好，先继续文字聊天也可以。", "warning");
-            scheduleRestore();
-            return;
-        }
         if (!hasRecorderSupport) {
             voiceButton.classList.add("is-unsupported");
             setPhase("idle", "idle", "当前设备暂不支持录音", "这台浏览器还不能直接录音，先继续打字也可以。", "warning");
             return;
         }
 
+        const epoch = ++voiceEpoch;
+        setPhase("thinking", "requesting_mic", "正在打开麦克风", "请在浏览器提示中允许使用麦克风；也可以停止后改用文字。");
         try {
             clearRestoreTimer();
             cleanupAudioPlayback();
@@ -1054,19 +1102,28 @@
             resetTurnMetrics();
             turnStartedAt = window.performance?.now?.() || Date.now();
 
-            currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            if (epoch !== voiceEpoch) {
+                stream.getTracks().forEach((track) => track.stop());
+                return;
+            }
+            currentStream = stream;
+            discardNextRecording = false;
             const mimeType = pickRecordingMimeType();
             mediaRecorder = mimeType
                 ? new MediaRecorder(currentStream, { mimeType })
                 : new MediaRecorder(currentStream);
 
             mediaRecorder.addEventListener("dataavailable", (event) => {
+                if (epoch !== voiceEpoch) return;
                 if (event.data && event.data.size > 0) {
                     recordedChunks.push(event.data);
                 }
             });
 
             mediaRecorder.addEventListener("stop", async () => {
+                if (epoch !== voiceEpoch) return;
+                window.clearInterval(recordingTimer);
                 const chunks = [...recordedChunks];
                 const recorderMimeType = mediaRecorder?.mimeType || mimeType || "audio/webm";
                 const shouldDiscard = discardNextRecording;
@@ -1108,11 +1165,25 @@
                 await transcribeAndSend(audioBlob);
             });
 
+            mediaRecorder.addEventListener("error", () => {
+                if (epoch !== voiceEpoch) return;
+                cancelVoice();
+                setPhase("idle", "idle", "录音中断了", "请重试录音，或使用下方文字输入。", "warning");
+            });
+
             mediaRecorder.start();
             recordStartedAt = window.performance?.now?.() || Date.now();
-            setPhase("listening", "listening", "我在听你说", "你说完后，我会直接替你发出去。");
+            setPhase("listening", "listening", "我在听你说", "说完后点「结束并发送」。每次最多录音 60 秒。", "");
+            const timer = document.getElementById("recording-duration");
+            if (timer) timer.textContent = "已录音 0 秒 / 60 秒";
+            recordingTimer = window.setInterval(() => {
+                const seconds = Math.floor(((window.performance?.now?.() || Date.now()) - recordStartedAt) / 1000);
+                if (timer) timer.textContent = `已录音 ${seconds} 秒 / 60 秒`;
+                if (seconds >= 60) stopListening();
+            }, 1000);
             emitDebugEvent("record_start");
         } catch (error) {
+            if (epoch !== voiceEpoch) return;
             console.error(error);
             releaseStream();
             mediaRecorder = null;
@@ -1129,10 +1200,30 @@
                 suggested_next_step: "Check browser microphone permissions before retrying."
             });
             finalizeTurnMetrics();
-            setPhase("idle", "idle", "这次没有顺利开始", "浏览器还没有拿到麦克风权限，我们先继续打字也可以。", "warning");
+            const detail = error.name === "NotAllowedError" ? "麦克风权限未开启。请在浏览器地址栏的权限设置中允许麦克风，或改用文字。"
+                : error.name === "NotFoundError" ? "没有找到麦克风，请连接麦克风后重试，或改用文字。"
+                    : "麦克风暂时无法使用，请检查是否被其他应用占用，或改用文字。";
+            setPhase("idle", "idle", "这次没有顺利开始", detail, "warning");
             scheduleRestore();
             emitDebugEvent("record_start_failed", debugState.error_message);
         }
+    }
+
+    function cancelVoice() {
+        if (currentStep === "sending_chat") {
+            muteCurrentReply = true;
+            stopSpeaking({ silent: true, preserveState: true });
+            setPhase("thinking", "sending_chat", "仍在等待回复", "本次回复只显示文字，不会自动朗读。");
+            return;
+        }
+        voiceEpoch += 1;
+        sttController?.abort();
+        sttController = null;
+        stopListening({ keepStatus: true, cancelPendingBlob: true });
+        mediaRecorder = null;
+        stopSpeaking({ silent: true, preserveState: true });
+        clearRestoreTimer();
+        setPhase("idle", "idle", "已停止", defaultHelpText);
     }
 
     function toggleListening() {
@@ -1162,12 +1253,13 @@
     setPhase("idle", "idle", "陪伴中", defaultHelpText);
     if (ttsToggle) {
         ttsToggle.checked = readTtsEnabled();
-        updateTtsFallbackStatus(ttsToggle.checked ? "语音朗读：浏览器朗读 / MiniMax TTS" : "语音朗读已关闭");
+        updateTtsFallbackStatus(ttsToggle.checked ? "收到回复后自动朗读" : "语音朗读已关闭");
         ttsToggle.addEventListener("change", () => {
-            window.localStorage.setItem("conversation_tts_enabled", String(ttsToggle.checked));
-            updateTtsFallbackStatus(ttsToggle.checked ? "语音朗读：浏览器朗读 / MiniMax TTS" : "语音朗读已关闭");
+            try { window.localStorage.setItem("conversation_tts_enabled", String(ttsToggle.checked)); } catch { /* Private browsing may disable storage. */ }
+            updateTtsFallbackStatus(ttsToggle.checked ? "收到回复后自动朗读" : "语音朗读已关闭");
             if (!ttsToggle.checked) {
-                stopSpeaking({ silent: true });
+                const playing = currentState === "speaking" || currentStep === "generating_speech";
+                stopSpeaking({ silent: true, preserveState: !playing });
             }
         });
     }
@@ -1183,15 +1275,23 @@
 
     voiceButton.addEventListener("click", toggleListening);
     stopSpeakingButton.addEventListener("click", () => {
-        stopSpeaking();
+        cancelVoice();
+    });
+    window.addEventListener("pagehide", () => {
+        voiceEpoch += 1;
+        sttController?.abort();
+        stopListening({ keepStatus: true, cancelPendingBlob: true });
+        stopSpeaking({ silent: true, preserveState: true });
+        clearRestoreTimer();
     });
 
     window.ConversationVoice = {
         onThinking(meta = {}) {
             clearRestoreTimer();
-            if (currentState === "listening") {
-                stopListening({ keepStatus: true });
-            }
+            voiceEpoch += 1;
+            sttController?.abort();
+            stopListening({ keepStatus: true, cancelPendingBlob: true });
+            muteCurrentReply = false;
             stopSpeaking({ silent: true, preserveState: true });
             const nextStep = "sending_chat";
             const nextText = meta.source === "voice" ? "我正在想怎么回答你。" : "我在想一下。";
@@ -1220,7 +1320,7 @@
             }
             debugState.final_status = "chat_failed";
             finalizeTurnMetrics();
-            setPhase("idle", "idle", "这次先停一下", "文字聊天不受影响，我们继续。", "warning");
+            setPhase("idle", "idle", "暂时没有收到回复", "内容已留在输入框。可检查网络后重试；上一次请求可能已保存，请勿连续重试。", "warning");
             scheduleRestore();
             emitDebugEvent("chat_error", meta.error || meta.source || "unknown");
         },
@@ -1228,10 +1328,8 @@
             stopSpeaking();
         },
         setIdle() {
-            if (currentState === "listening") {
-                stopListening({ keepStatus: true, cancelPendingBlob: true });
-            }
-            stopSpeaking({ silent: true });
+            cancelVoice();
+            if (currentStep === "sending_chat") return;
             finalizeTurnMetrics();
             setPhase("idle", "idle", "陪伴中", defaultHelpText);
         }

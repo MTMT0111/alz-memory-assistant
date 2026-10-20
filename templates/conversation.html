@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 
 {% block page_content %}
+<link rel="stylesheet" href="/static/conversation.css?v=20261020-voice">
 <section class="conversation-device-shell">
     <div class="device-top-status-bar" aria-label="当前状态">
         <div class="conversation-top-actions">
@@ -13,12 +14,12 @@
         </div>
         <div class="device-top-status-info">
             <span class="device-top-hint" id="patient-name-hint">温和陪伴中</span>
-            <span id="conversation-provider-hint" class="device-top-hint conversation-provider-compact">模型：读取中</span>
+            <span id="conversation-provider-hint" class="device-top-hint conversation-provider-compact" hidden>模型：读取中</span>
         </div>
         {% if debug_mode %}
-        <a class="ghost-button conversation-debug-link" href="/conversation">普通模式</a>
+        <a class="ghost-button conversation-debug-link" href="/conversation?patient_id={{ caregiver_patient_id | urlencode }}">普通模式</a>
         {% else %}
-        <a class="ghost-button conversation-debug-link" href="/conversation?debug=1">调试信息</a>
+        <a class="ghost-button conversation-debug-link" href="/conversation?patient_id={{ caregiver_patient_id | urlencode }}&debug=1">调试信息</a>
         {% endif %}
     </div>
 
@@ -52,8 +53,13 @@
     </details>
 
     <section class="chat-panel chat-panel-device">
+        <header class="voice-page-heading">
+            <span class="voice-preview-label">陪伴语音 · 网页体验</span>
+            <h1>慢慢说，我在这里听</h1>
+            <p>聊聊今天的心情，或一起想起熟悉的人和事。</p>
+        </header>
         <details class="conversation-suggestions">
-            <summary>常用开场</summary>
+            <summary>不知道从哪里聊起？</summary>
             <div class="conversation-quick-tests" aria-label="快捷测试">
                 <button type="button" class="conversation-quick-test" data-message="家人什么时候回来？">家人什么时候回来？</button>
                 <button type="button" class="conversation-quick-test" data-message="我是不是还没吃药？">我是不是还没吃药？</button>
@@ -63,27 +69,31 @@
                 <button type="button" class="conversation-quick-test" data-message="想聊以前的事">想聊以前的事</button>
             </div>
         </details>
-        <div id="chat-box" class="chat-box-device"></div>
+        <div id="chat-box" class="chat-box-device" role="log" aria-label="对话文字" aria-live="polite" aria-relevant="additions text"></div>
 
         <div class="device-control-dock" aria-label="对话控制区">
+            <div class="voice-primary-controls">
+                <button id="mic-btn" type="button" class="voice-placeholder-button device-voice-button" aria-label="开始说话" aria-describedby="composer-help-text" aria-pressed="false">开始说话</button>
+                <button id="stop-speaking-button" type="button" class="dock-quiet-button" disabled>停止</button>
+            </div>
+            <span id="recording-duration" class="recording-duration" hidden>已录音 0 秒 / 60 秒</span>
             <div class="input-row input-row-chat input-row-device">
-                <button id="mic-btn" type="button" class="voice-placeholder-button inline-voice-button device-voice-button" aria-label="开始或停止录音">麦克风</button>
-                <input id="input" type="text" placeholder="想起谁了？或者想说哪件事？">
+                <label class="voice-text-label" for="input">也可以打字</label>
+                <input id="input" type="text" placeholder="把想说的话写在这里" autocomplete="off">
                 <button id="send-button" type="button">发送</button>
             </div>
             <div id="device-dock-status" class="device-dock-status" aria-live="polite" data-state="idle">
                 <div class="device-dock-state">
                     <span class="chat-status-dot"></span>
-                    <span id="chat-status-text">陪伴中</span>
+                    <span id="chat-status-text">准备好听你说话</span>
                 </div>
-                <span id="composer-help-text" class="device-help-text">按 Enter 发送</span>
+                <span id="composer-help-text" class="device-help-text">点一下开始说话，说完再点一下结束并发送。</span>
                 <label class="tts-toggle" for="tts-enabled-toggle">
                     <input id="tts-enabled-toggle" type="checkbox" checked>
-                    <span>语音朗读</span>
+                    <span>自动朗读回复</span>
                 </label>
-                <span id="tts-fallback-status" class="device-help-text">语音朗读：浏览器朗读 / MiniMax TTS</span>
+                <span id="tts-fallback-status" class="device-help-text">收到回复后自动朗读</span>
                 <span id="tts-playing-indicator" class="tts-playing-indicator" hidden>🔊 正在播放</span>
-                <button id="stop-speaking-button" type="button" class="dock-quiet-button" disabled>停止</button>
             </div>
             <div id="voice-status-strip" class="voice-status-strip" aria-live="polite" {% if not debug_mode %}hidden{% endif %}>
                 <span class="voice-status-chip">
@@ -159,6 +169,7 @@
                 </div>
             </details>
         </div>
+        <p class="voice-preview-note">这是未来陪伴设备的网页体验。结束录音后，音频会发送给语音服务进行识别；文字进入对话记录。陪伴回复不能代替家属确认或医疗建议。</p>
     </section>
 </section>
 {% endblock %}

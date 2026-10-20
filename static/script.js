@@ -56,7 +56,7 @@ const debugMode = Boolean(bootstrap.debugMode) || new URLSearchParams(window.loc
 const sendButtonDefaultText = "发送";
 const saveButtonDefaultText = "保存档案";
 const defaultWelcomeMessage = "你好。想起谁了，或者想说哪件事，我们就从那里开始。";
-const defaultConversationComposerNote = "按 Enter 发送";
+const defaultConversationComposerNote = "点一下开始说话，说完再点一下结束并发送。文字输入可按 Enter 发送。";
 const inputPlaceholder = "想起谁了？或者想说哪件事？";
 const deviceToggleStorageKey = "alz-device-settings";
 
@@ -283,7 +283,7 @@ function bindPageEvents() {
 
     if (isPage("conversation") && input) {
         input.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
+            if (event.key === "Enter" && !event.shiftKey && !event.isComposing && event.keyCode !== 229) {
                 event.preventDefault();
                 sendMessage();
             }
@@ -383,7 +383,6 @@ function renderAll() {
         renderConversationPatientHeader(profile);
         renderConversationTopStatus();
         updateConversationLayout();
-        updateComposerNote(defaultConversationComposerNote);
         renderInitialMessages(currentLogs);
         return;
     }
@@ -660,15 +659,6 @@ function scrollConversationToLatest(options = {}) {
     }
 
     const performScroll = () => {
-        const anchor = ensureConversationScrollAnchor(chatBox);
-        const target = anchor || chatBox.lastElementChild;
-        if (target instanceof HTMLElement) {
-            target.scrollIntoView({
-                block: "end",
-                inline: "nearest",
-                behavior: immediate ? "auto" : "smooth"
-            });
-        }
         const visibleBottomOffset = Math.max(0, chatBox.scrollHeight - chatBox.clientHeight);
         chatBox.scrollTop = visibleBottomOffset;
     };
@@ -5283,6 +5273,7 @@ async function sendMessage(options = {}) {
     if (!input || !sendButton) {
         return;
     }
+    if (sendButton.disabled) return { success: false, busy: true };
 
     const overrideMessage = typeof options.message === "string" ? options.message.trim() : "";
     const message = overrideMessage || input.value.trim();
@@ -5305,6 +5296,7 @@ async function sendMessage(options = {}) {
         source: options.source || "text"
     });
     sendButton.disabled = true;
+    input.disabled = true;
     sendButton.textContent = "发送中...";
     if (typeof options.onBeforeRequest === "function") {
         options.onBeforeRequest({ message, source: options.source || "text" });
@@ -5324,9 +5316,12 @@ async function sendMessage(options = {}) {
     ].slice(-10);
     renderAll();
     const requestStartedAt = window.performance?.now?.() || Date.now();
+    const controller = new AbortController();
+    const requestTimeout = window.setTimeout(() => controller.abort(), 60000);
 
     try {
         const response = await fetch("/chat", {
+            signal: controller.signal,
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -5391,9 +5386,9 @@ async function sendMessage(options = {}) {
         return result;
     } catch (error) {
         currentLogs = previousLogs;
-        appendMessage("assistant", "我这边暂时没有连上服务，但我还在。稍后再试一次，我们继续。");
+        input.value = message;
         renderAll();
-        updateComposerNote("刚刚没发出去，稍后再试。", "warning");
+        updateComposerNote("暂未收到回复，内容已保留。上一次请求可能已保存，请勿连续重试。", "warning");
         const chatLatencyMs = Math.max(0, Math.round((window.performance?.now?.() || Date.now()) - requestStartedAt));
         const failure = {
             success: false,
@@ -5411,9 +5406,11 @@ async function sendMessage(options = {}) {
         console.error(error);
         return failure;
     } finally {
+        window.clearTimeout(requestTimeout);
         sendButton.disabled = false;
+        input.disabled = false;
         sendButton.textContent = sendButtonDefaultText;
-        input.focus();
+        if (options.source !== "voice") input.focus();
     }
 }
 
